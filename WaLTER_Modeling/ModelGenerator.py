@@ -5,8 +5,6 @@ from pathlib import Path
 import yaml
 import numpy as np
 import mujoco
-import scipy
-import sys
 
 
 class GenerateModel():
@@ -671,9 +669,9 @@ class GenerateModel():
                 )
         
 def main(argv=None):
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir,)))
-    model_config_path = 'model_configs/WS_Scale/model_config.yaml'
-    motor_config_path = 'model_configs/WS_Scale/motor_config.yaml'
+    config_dir = Path(__file__).parent / 'parametric_configs' / 'WS'
+    model_config_path = config_dir / 'model_config.yaml'
+    motor_config_path = config_dir / 'motor_config.yaml'
     model_class = GenerateModel(model_config_path, motor_config_path)
 
     xml_path = os.path.join(
