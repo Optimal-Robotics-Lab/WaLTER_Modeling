@@ -455,65 +455,7 @@ class GenerateModel():
             trntype = mujoco.mjtTrn.mjTRN_JOINT,
         )
 
-    # # Add Sensors:
-    #     spec.add_sensor(
-    #         name='br_hip_force',
-    #         type=mujoco.mjtSensor.mjSENS_FORCE,
-    #         objtype=mujoco.mjtObj.mjOBJ_SITE,
-    #         refname='torso_right_thigh',
-    #         objname='torso_right_thigh_site',
-    #     )
-    #     spec.add_sensor(
-    #         name = 'br_hip_torque',
-    #         type = mujoco.mjtSensor.mjSENS_TORQUE,
-    #         objtype = mujoco.mjtObj.mjOBJ_SITE,
-    #         refname = 'torso_right_thigh',
-    #         objname = 'torso_right_thigh_site',
-    #     )
-    #     spec.add_sensor(
-    #         name='br_knee_force',
-    #         type=mujoco.mjtSensor.mjSENS_FORCE,
-    #         objtype=mujoco.mjtObj.mjOBJ_SITE,
-    #         refname='torso_right_shin',
-    #         objname='torso_right_shin_site',
-    #     )
-    #     spec.add_sensor(
-    #         name = 'br_knee_torque',
-    #         type = mujoco.mjtSensor.mjSENS_TORQUE,
-    #         objtype = mujoco.mjtObj.mjOBJ_SITE,
-    #         refname = 'torso_right_shin',
-    #         objname = 'torso_right_shin_site',
-    #     )
-    #     spec.add_sensor(
-    #         name = 'fr_hip_force',
-    #         type = mujoco.mjtSensor.mjSENS_FORCE,
-    #         objtype = mujoco.mjtObj.mjOBJ_SITE,
-    #         refname = 'head_right_thigh',
-    #         objname = 'head_right_thigh_site',
-    #     )
-    #     spec.add_sensor(
-    #         name = 'fr_knee_force',
-    #         type = mujoco.mjtSensor.mjSENS_FORCE,
-    #         objtype = mujoco.mjtObj.mjOBJ_SITE,
-    #         refname = 'head_right_shin',
-    #         objname = 'head_right_shin_site',
-    #     )
-    #     spec.add_sensor(
-    #         name = 'fr_knee_torque',
-    #         type = mujoco.mjtSensor.mjSENS_TORQUE,
-    #         objtype = mujoco.mjtObj.mjOBJ_SITE,
-    #         refname = 'head_right_shin',
-    #         objname = 'head_right_shin_site',
-    #     )
-
-    #     spec.add_sensor(
-    #         name = 'fr_hip_torque',
-    #         type = mujoco.mjtSensor.mjSENS_TORQUE,
-    #         objtype = mujoco.mjtObj.mjOBJ_SITE,
-    #         refname = 'head_right_thigh',
-    #         objname = 'head_right_thigh_site',
-    #     )
-
+   
         # Compile:
         self.mj_model = spec.compile()
         self.model_xml = spec.to_xml()
