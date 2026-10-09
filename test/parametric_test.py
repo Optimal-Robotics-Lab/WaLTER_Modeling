@@ -4,11 +4,16 @@ import mujoco.viewer
 import yaml
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__),os.path.pardir))
-import ModelGenerator
 
-model_config_path = 'parametric_configs/WS/model_config.yaml'
-motor_config_path = 'parametric_configs/WS/motor_config.yaml'
+# Allow running straight from a checkout (`python3 test/parametric_test.py`)
+# without installing the package first. Harmless when it *is* installed.
+sys.path.append(os.path.join(os.path.dirname(__file__), os.path.pardir))
+import WaLTER_Modeling
+import WaLTER_Modeling.ModelGenerator as ModelGenerator
+
+config_dir = WaLTER_Modeling.config_dir()
+model_config_path = config_dir / 'model_config.yaml'
+motor_config_path = config_dir / 'motor_config.yaml'
 
 walter = ModelGenerator.GenerateModel(model_config_path, motor_config_path)
 
