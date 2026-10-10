@@ -12,7 +12,7 @@ authors = [
     {name = "Matthew Gomez", email = "matthewgomezm10@gmail.com"}
 ]
 dependencies = [
-    "absl-py",
+    "mjviser>=0.0.14",
     "mujoco>=3.2.3",
     "numpy",
     "pyyaml",
@@ -27,8 +27,32 @@ viz = [
 ]
 
 [project.scripts]
-generate-walter = "WaLTER_Modeling:main"
+generate-walter = "WaLTER_Modeling.cli:main"
 
 [tool.uv.build-backend]
 module-name = "WaLTER_Modeling"
 module-root = ""
+
+[dependency-groups]
+dev = [
+    "pillow>=12.3.0",
+    "pyright>=1.1.414",
+    "ruff>=0.17.0",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, import order, PEP 8 naming, type annotations, bugbear, pyupgrade
+select = ["E", "W", "F", "I", "N", "ANN", "B", "UP"]
+# The established package name WaLTER_Modeling is not snake_case.
+ignore = ["N999"]
+
+[tool.pyright]
+include = ["WaLTER_Modeling", "scripts"]
+typeCheckingMode = "basic"
+# mujoco's API comes from compiled extensions without type stubs, so Pyright
+# cannot see attributes like mujoco.MjSpec; report these as warnings, not errors.
+reportAttributeAccessIssue = "warning"
