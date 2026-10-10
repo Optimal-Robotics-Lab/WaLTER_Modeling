@@ -1,0 +1,40 @@
+---
+description: Optimal Robotics Lab git workflow (branches, commits, pull requests)
+alwaysApply: true
+---
+
+# Git Workflow (Optimal Robotics Lab)
+
+Goal: keep `main` stable, make every change traceable, and let future students pick up the project. Avoid bureaucracy.
+
+## Branches
+- Never commit directly to `main`. It's protected, so every change reaches it through a Pull Request.
+- Use one branch per feature, fix, experiment, or major change, named `<type>/<short-kebab-description>`:
+  - `feature/motor-model`, `fix/can-timeout`, `refactor/config-loading`.
+- Keep each branch to one logical change and merge it quickly. Long-lived branches drift.
+- Don't use forks. Lab members push branches to the shared repo.
+
+## Starting work
+```bash
+git switch main
+git pull
+git switch -c feature/my-change
+```
+On longer branches, merge in the latest `main` periodically.
+
+## Commits
+- Write messages in the imperative mood and describe one logical change: `Add motor torque-speed model`.
+- Stage specific files rather than everything at once when unrelated or generated files are present, such as exported `*.xml` models or `.venv`.
+
+## Pull Requests
+```bash
+git push -u origin feature/my-change
+```
+- Open a PR targeting `main`, with a short description of **what changed and why**. The PR is the record future maintainers will read.
+- Review is encouraged for large, architectural, or shared-impact changes, but it isn't required. Authors may merge their own PRs.
+- Delete the branch after merging.
+
+## Agent behavior
+- Never commit, push, merge, or delete a branch unless the user asks.
+- Before starting work on `main` or an unrelated branch, suggest a suitably named branch.
+- Never force-push to `main`.

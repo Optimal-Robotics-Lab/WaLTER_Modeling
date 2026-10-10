@@ -1,0 +1,99 @@
+# Full-scale WaLTER hardware model.
+#
+# Status of the values below:
+#   - Leg visual meshes and leg joint positions (knee, axles): estimated from the CAD
+#     meshes in assets/meshes/visual; values marked GUESS still need confirmation.
+#   - Torso geometry, hip positions, collision primitives, and inertials: PLACEHOLDERS
+#     from parametric/configs/FS, to be replaced with CAD-derived values.
+#
+# Units: meters, kilograms, kg*m^2, degrees, N*m. Quaternions are (w, x, y, z).
+# Every body frame sits at the joint that connects it to its parent, so `pos` is
+# that joint's location in the parent body's frame.
+# Leg values are given for the left legs; right legs are mirrored across the xz-plane.
+#
+# Geometry per body:
+#   inertial: explicit mass properties (geoms never contribute mass)
+#   col:      list of contact primitives; type is box | capsule | cylinder | sphere | ellipsoid | mesh
+#             (mesh entries name a file in assets/meshes/collision/ without the .obj extension)
+#   vis:      optional CAD mesh; omit it to render copies of the contact primitives instead
+#     mesh:       file in assets/meshes/visual/ without the .obj extension (left-side part)
+#     mesh_right: optional separately modeled right-side part; otherwise the left mesh is mirrored
+#     pos, quat:  pose of the mesh's own frame in the body frame
+
+start_pos: [0, 0, 0.5]
+
+back_torso:
+  inertial: {pos: [0, 0, 0], mass: 36.0, diaginertia: [0.2372, 0.7320, 0.7748]}
+  col:
+    - {type: box, size: [0.23, 0.15, 0.09], pos: [0, 0, 0]}
+
+front_torso:
+  pos: [0.2554, 0, 0]
+  inertial: {pos: [0.15, 0, 0], mass: 18.0, diaginertia: [0.1186, 0.1836, 0.2050]}
+  col:
+    - {type: box, size: [0.15, 0.15, 0.09], pos: [0.15, 0, 0]}
+
+thigh:
+  pos_back: [-0.108, 0.15, 0]
+  pos_front: [0.177, 0.15, 0]
+  inertial: {pos: [0, 0.04, -0.09], mass: 3.375, diaginertia: [0.01046, 0.01046, 0.0027]}
+  col:
+    - {type: capsule, size: [0.04, 0.09], pos: [0, 0.04, -0.09]}
+  # Mesh frame: link along y, hip shaft and knee axis along z.
+  # Hip shaft: radius 0.03, free end at z=-0.054448, shoulder at z=-0.024448,
+  # centered on the mesh origin. The free end plugs into the torso.
+  # The motor housing at +y stands above that shaft. The knee is the other end:
+  # a pad centered at (0, -0.180975), outboard face z=0.018225, radius 0.046355,
+  # which matches the shin bore.
+  # Shaft +z points outboard so the free end points inboard, +y points up, and
+  # the knee points down: 180 deg about (0, 1, 1)/sqrt(2). pos centers the shaft
+  # on the hip joint.
+  vis:
+    mesh: thigh_vis_mesh
+    pos: [0, 0.039448, 0]
+    quat: [0, 0, 0.7071068, 0.7071068]
+
+shin:
+  # Knee pad center, on its outboard face, expressed in the thigh body frame.
+  pos: [0, 0.057673, -0.180975]
+  inertial: {pos: [0, 0, 0], mass: 1.2, diaginertia: [0.00096, 0.005146, 0.005146]}
+  col:
+    - {type: capsule, size: [0.04, 0.108], pos: [0, 0, 0], quat: [0.7071068, 0, 0.7071068, 0]}
+  # Mesh frame: knee hole at the origin, axles along mesh x, plate spans mesh y 0 to 0.047.
+  vis:
+    mesh: shin_vis_mesh
+    pos: [0, 0, 0]
+    quat: [1, 0, 0, 0]
+
+wheel:
+  # Axles at the centers of the shin's rounded ends; wheels mount on the shin's outer face.
+  pos_axle1: [0.1137, 0.0471, 0]
+  pos_axle2: [-0.1137, 0.0471, 0]
+  inertial: {pos: [0, 0, 0], mass: 2.25, diaginertia: [0.0075, 0.01125, 0.0075]}
+  col:
+    - type: cylinder
+      size: [0.1, 0.05]
+      pos: [0, 0, 0]
+      quat: [0.7071068, 0.7071068, 0, 0]
+      friction: [1, 0.005, 0.0001]
+      solref: [-80800, -112]
+  # Mesh frame: spin axis along mesh z. The z = 0 face has the axle bore and mounts
+  # against the shin; the closed hub face at z = 0.078 faces outboard.
+  # Rotation of -90 deg about x maps mesh z -> body +y (outboard).
+  vis:
+    mesh: wheel_vis_mesh
+    pos: [0, 0, 0]
+    quat: [0.7071068, -0.7071068, 0, 0]
+
+joints:
+  waist: {axis: [1, 0, 0], range: [-25, 25], stiffness: 10, damping: 1}
+  hip: {axis: [0, 1, 0], damping: 2}
+  knee: {axis: [0, 1, 0], damping: 2}
+  axle: {axis: [0, 1, 0], damping: 2}
+
+# Joint armature = rotor_inertia * gear_ratio^2.
+# stall_torque is motor-side; the actuator's joint torque limit is stall_torque * gear_ratio.
+motors:
+  hip: {gear_ratio: 160, stall_torque: 1.8, rotor_inertia: 0.0002}
+  knee: {gear_ratio: 120, stall_torque: 1.8, rotor_inertia: 0.0002}
+  axle: {gear_ratio: 30, stall_torque: 1.8, rotor_inertia: 0.0002}

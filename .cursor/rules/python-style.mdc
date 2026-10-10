@@ -1,0 +1,41 @@
+---
+description: Optimal Robotics Lab Python style guide (naming, layout, types, state, imports, errors, tooling)
+globs: **/*.py
+alwaysApply: false
+---
+
+# Python Style (Optimal Robotics Lab)
+
+Commenting and docstrings are covered in `python-comments.mdc`.
+
+## Naming and formatting
+- Follow PEP 8. `snake_case` for variables, functions, and modules; `PascalCase` for classes; `UPPER_SNAKE_CASE` for constants; `_leading_underscore` for internal members.
+- Use descriptive names (`desired_velocity`, not `dv`, `x1`, or `tmp`). Domain notation such as `dt`, `q`, `q_dot`, `tau`, `imu`, or `pid` is fine when the meaning is clear.
+- Prefer readable, explicit code over clever or compact code.
+
+## Layout and imports
+- Flat package layout: `package/`, `tests/`, `scripts/`, `pyproject.toml`, `README.md`. Install with `pip install -e .` or `uv sync`.
+- Never modify `sys.path` to make imports work. Use proper package imports.
+- Group imports in this order: standard library, then third-party, then local, with a blank line between groups. No wildcard imports.
+
+## Functions and types
+- Type every argument and return value in function and method signatures, using `-> None` when nothing is returned.
+- A function is one coherent operation. Split it when that helps readability, but never just to cut line or parameter count. A longer function is fine if it keeps the math or data flow clear.
+- Use descriptive names at API boundaries. Inside narrowly scoped math, short notation that mirrors the equations is preferred (`tau = kp * error - kd * q_dot`).
+
+## Control flow, state, and constants
+- Keep control flow shallow. Use named intermediates such as `robot_has_failed = abs(body_pitch) > MAX_ALLOWED_PITCH`.
+- Side effects must be obvious from the name. A `compute_*` function never writes files or changes global state. Avoid mutable global state.
+- No unexplained magic numbers: give them a named constant, or move them to config (a YAML file or a `@dataclass` config) for simulation, controller, and experiment parameters.
+
+## Errors and testing
+- Raise exceptions for invalid external input, with a clear message (`raise ValueError(f"Expected {expected}, received {actual}.")`). Use `assert` only for internal invariants.
+- Keep math, transforms, config, and serialization logic independently testable. Tests go in `tests/` and run with pytest.
+
+## Tooling
+- Use Ruff (lint, import order, formatting), Pyright or mypy (type checks), and pytest. Keep their configuration in `pyproject.toml`.
+
+## Research code
+- Once code is reused, move it into the package, then name, type, and test it, and remove dead experiments.
+- Never create versioned copies like `final_v2.py`. Use git.
+- Before calling code done, ask whether an engineer in the field could understand it without the comments. If not, fix the naming and structure first.
