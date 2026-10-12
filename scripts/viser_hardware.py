@@ -52,6 +52,8 @@ def main() -> None:
             # Replaces viewer.sync(): pushes the new body poses to the browser.
             scene.update_from_mjdata(data)
 
+            #
+
             # Pace against wall-clock time so playback stays in real time.
             elapsed = time.perf_counter() - step_start
             time_until_next_step = model.opt.timestep - elapsed
