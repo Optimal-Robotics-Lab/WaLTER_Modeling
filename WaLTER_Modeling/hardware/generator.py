@@ -336,8 +336,12 @@ class HardwareModel:
             )
         else:
             # Primitive sizes vary in length (sphere 1, capsule/cylinder 2, box 3),
-            # but MuJoCo always stores three entries.
+            # but MuJoCo always stores three entries. An ellipsoid needs three
+            # positive radii. Two entries keep the cylinder convention — radius,
+            # then half-length along z — so a wheel can change type and keep its size.
             size = list(geom_config["size"])
+            if geom_type == "ellipsoid" and len(size) == 2:
+                size = [size[0], size[0], size[1]]
             if not 1 <= len(size) <= MAX_GEOM_SIZE_ENTRIES:
                 raise ValueError(
                     f"Geom '{name}' size must have 1 to 3 entries, received {size}."

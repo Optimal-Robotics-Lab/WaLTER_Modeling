@@ -52,7 +52,7 @@ thigh:
   # starts inside both wheel cylinders, and that contact is stiff enough to
   # cancel knee torque.
   col:
-    - {type: capsule, size: [0.03, 0.04], pos: [0, 0.02, -0.04]}
+    - {type: capsule, size: [0.03, 0.0904875], pos: [0, 0.03, -0.08]}
   # Mesh frame: link along y, hip shaft and knee axis along z.
   # Hip shaft: radius 0.03, free end at z=-0.054448, shoulder at z=-0.024448,
   # centered on the mesh origin. The free end plugs into the torso.
@@ -72,7 +72,7 @@ shin:
   pos: [0, 0.057673, -0.180975]
   inertial: {pos: [0, 0, 0], mass: 1.2, diaginertia: [0.00096, 0.005146, 0.005146]}
   col:
-    - {type: capsule, size: [0.04, 0.108], pos: [0, 0, 0], quat: [0.7071068, 0, 0.7071068, 0]}
+    - {type: capsule, size: [0.03, 0.108], pos: [0, 0.03, 0], quat: [0.7071068, 0, 0.7071068, 0]}
   # Mesh frame: knee hole at the origin, axles along mesh x, plate spans mesh y 0 to 0.047.
   vis:
     mesh: shin_vis_mesh
@@ -85,9 +85,11 @@ wheel:
   pos_axle2: [-0.1137, 0.0471, 0]
   inertial: {pos: [0, 0, 0], mass: 2.25, diaginertia: [0.0075, 0.01125, 0.0075]}
   col:
-    - type: cylinder
-      size: [0.1, 0.05]
-      pos: [0, 0, 0]
+    # Radius, then half-width along the axle. ellipsoid repeats the radius on
+    # both rolling axes; cylinder uses these two numbers directly.
+    - type: ellipsoid
+      size: [0.11, 0.05]
+      pos: [0, 0.04, 0]
       quat: [0.7071068, 0.7071068, 0, 0]
       friction: [1, 0.005, 0.0001]
       solref: [-80800, -112]
