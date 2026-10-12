@@ -18,6 +18,12 @@ PACKAGE_DIR = Path(__file__).parent
 DEFAULT_CONFIG = PACKAGE_DIR / "configs" / "hardware_config.yaml"
 MESH_DIR = PACKAGE_DIR / "assets" / "meshes"
 MESH_SUBDIRS = {naming.VIS: "visual", naming.COL: "collision"}
+TEXTURE_DIR = PACKAGE_DIR / "assets" / "textures"
+# One atlas for every wheel. UVs in wheel_vis_mesh.obj put the tread on the
+# rolling surface and the gray hub on the faces. See scripts/make_wheel_texture.py.
+WHEEL_VIS_MESH = "wheel_vis_mesh"
+WHEEL_TEXTURE = "wheel.png"
+WHEEL_MATERIAL = "wheel"
 
 # MuJoCo viewer groups 0-2 are visible by default, so contact geometry in group 3
 # stays hidden unless the user toggles it on.
@@ -63,14 +69,16 @@ class HardwareModel:
     (compiled model), and ``model_xml`` (MJCF string).
     """
 
-    def __init__(self, config_path: str | Path = DEFAULT_CONFIG) -> None:
+    def __init__(self, config_path: str | Path = DEFAULT_CONFIG, waist_locked: bool = False) -> None:
         self.config = yaml.safe_load(Path(config_path).read_text())
 
         self.spec = mujoco.MjSpec()
-        # An absolute mesh directory lets the exported XML load from any folder,
+        # Absolute asset directories let the exported XML load from any folder,
         # at the cost of tying it to this machine's checkout location.
         self.spec.meshdir = str(MESH_DIR)
+        self.spec.texturedir = str(TEXTURE_DIR)
         self._added_meshes: set[str] = set()
+        self._add_wheel_material()
 
         # Visual and contact geometry get separate default classes so visual meshes
         # never collide and no geom ever contributes mass; bodies set mass explicitly.
@@ -87,14 +95,38 @@ class HardwareModel:
         self.collision_class.geom.conaffinity = 1
         self.collision_class.geom.density = 0
 
+        self.waist_locked = waist_locked
+
         self._build_robot()
 
         self.mj_model = self.spec.compile()
         self.model_xml = self.spec.to_xml()
 
+    def _add_wheel_material(self) -> None:
+        """RGB texture shared by every wheel visual. Nothing here affects contact."""
+        texture_path = TEXTURE_DIR / WHEEL_TEXTURE
+        if not texture_path.is_file():
+            raise FileNotFoundError(f"Wheel texture not found at {texture_path}.")
+        self.spec.add_texture(
+            name="wheel_texture",
+            type=mujoco.mjtTexture.mjTEXTURE_2D,
+            file=WHEEL_TEXTURE,
+        )
+        material = self.spec.add_material(
+            name=WHEEL_MATERIAL,
+            rgba=[1.0, 1.0, 1.0, 1.0],
+            # Low specular so the rubber stays matte. The hub reads as metal
+            # from the texture itself, not from a shiny material on the tire.
+            specular=0.12,
+            shininess=0.35,
+            reflectance=0.0,
+        )
+        material.textures[mujoco.mjtTextureRole.mjTEXROLE_RGB] = "wheel_texture"
+
     def _build_robot(self) -> None:
         config = self.config
         waist_config = config["joints"]["waist"]
+        
 
         # Root: the back torso carries the free joint, so it defines the base frame.
         back_torso = self.spec.worldbody.add_body(
@@ -109,14 +141,16 @@ class HardwareModel:
             name=naming.FRONT_TORSO,
             pos=config["front_torso"]["pos"],
         )
-        front_torso.add_joint(
-            type=mujoco.mjtJoint.mjJNT_HINGE,
-            name=naming.WAIST,
-            axis=waist_config["axis"],
-            range=waist_config["range"],
-            stiffness=waist_config.get("stiffness", 0),
-            damping=waist_config.get("damping", 0),
-        )
+        if not self.waist_locked:
+            front_torso.add_joint(
+                type=mujoco.mjtJoint.mjJNT_HINGE,
+                name=naming.WAIST,
+                axis=waist_config["axis"],
+                range=waist_config["range"],
+                stiffness=waist_config.get("stiffness", 0),
+                damping=waist_config.get("damping", 0),
+            )
+
         self._add_body_contents(front_torso, config["front_torso"], mirrored=False)
 
         # Legs: front legs hang off the front torso and back legs off the back torso,
@@ -249,7 +283,7 @@ class HardwareModel:
                 mirrored=mirrored,
                 right_mesh=visual_config.get("mesh_right"),
             )
-            body.add_geom(
+            geom = body.add_geom(
                 self.visual_class,
                 name=naming.geom(body.name, naming.VIS),
                 type=mujoco.mjtGeom.mjGEOM_MESH,
@@ -259,6 +293,11 @@ class HardwareModel:
                     visual_config.get("quat", [1, 0, 0, 0]), mirrored
                 ),
             )
+            # The visual class color would tint the texture. White leaves the
+            # atlas unchanged on the wheel and does not touch the other meshes.
+            if visual_config["mesh"] == WHEEL_VIS_MESH:
+                geom.material = WHEEL_MATERIAL
+                geom.rgba = [1.0, 1.0, 1.0, 1.0]
             return
 
         for index, geom_config in enumerate(collision_configs):

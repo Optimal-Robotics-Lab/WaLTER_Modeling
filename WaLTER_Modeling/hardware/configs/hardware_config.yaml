@@ -80,6 +80,9 @@ wheel:
   # Mesh frame: spin axis along mesh z. The z = 0 face has the axle bore and mounts
   # against the shin; the closed hub face at z = 0.078 faces outboard.
   # Rotation of -90 deg about x maps mesh z -> body +y (outboard).
+  # UVs in the mesh sample assets/textures/wheel.png: tread on the rounded
+  # outside, gray metal only in the outboard hub recess.
+  # Rebuild with scripts/make_wheel_texture.py.
   vis:
     mesh: wheel_vis_mesh
     pos: [0, 0, 0]
