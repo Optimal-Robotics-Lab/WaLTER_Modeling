@@ -46,8 +46,13 @@ thigh:
   pos_back: [-0.027, 0.15, 0]
   pos_front: [0.338, 0.15, 0]
   inertial: {pos: [0, 0.04, -0.09], mass: 3.375, diaginertia: [0.01046, 0.01046, 0.0027]}
+  # Inboard of the wheels. The cylinder runs from the hip (z = 0) to z = -0.08;
+  # each end cap adds the 0.03 m radius. The wheels sit beside the knee and
+  # sweep up into the thigh as the knee flexes. A capsule continued to the knee
+  # starts inside both wheel cylinders, and that contact is stiff enough to
+  # cancel knee torque.
   col:
-    - {type: capsule, size: [0.04, 0.09], pos: [0, 0.04, -0.09]}
+    - {type: capsule, size: [0.03, 0.04], pos: [0, 0.02, -0.04]}
   # Mesh frame: link along y, hip shaft and knee axis along z.
   # Hip shaft: radius 0.03, free end at z=-0.054448, shoulder at z=-0.024448,
   # centered on the mesh origin. The free end plugs into the torso.
