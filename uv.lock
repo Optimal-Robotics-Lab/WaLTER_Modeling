@@ -1225,6 +1225,7 @@ dependencies = [
     { name = "mujoco" },
     { name = "numpy" },
     { name = "pyyaml" },
+    { name = "viser" },
 ]
 
 [package.optional-dependencies]
@@ -1252,6 +1253,7 @@ requires-dist = [
     { name = "pyqt6", marker = "extra == 'viz'" },
     { name = "pyyaml" },
     { name = "scipy", marker = "extra == 'viz'" },
+    { name = "viser", specifier = ">=1.1.1" },
 ]
 provides-extras = ["viz"]
 

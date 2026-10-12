@@ -9,13 +9,15 @@ description = "Model generation scripts for WaLTER morphology"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
-    {name = "Matthew Gomez", email = "matthewgomezm10@gmail.com"}
+    {name = "Matthew Gomez", email = "matthewgomezm10@gmail.com"},
+    {name = "David Jay", email = "davidjayfsu@gmail.com"}
 ]
 dependencies = [
     "mjviser>=0.0.14",
     "mujoco>=3.2.3",
     "numpy",
     "pyyaml",
+    "viser>=1.1.1",
 ]
 
 [project.optional-dependencies]
@@ -55,4 +57,4 @@ include = ["WaLTER_Modeling", "scripts"]
 typeCheckingMode = "basic"
 # mujoco's API comes from compiled extensions without type stubs, so Pyright
 # cannot see attributes like mujoco.MjSpec; report these as warnings, not errors.
-reportAttributeAccessIssue = "warning"
+reportAttributeAccessIssue = "none"
