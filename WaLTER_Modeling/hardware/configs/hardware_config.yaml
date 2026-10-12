@@ -5,6 +5,9 @@
 #     meshes in assets/meshes/visual; values marked GUESS still need confirmation.
 #   - Torso geometry, hip positions, collision primitives, and inertials: PLACEHOLDERS
 #     from parametric/configs/FS, to be replaced with CAD-derived values.
+#     The long segment is the front torso here. The parametric model puts that
+#     segment at the root. Payloads mount on the long segment, and that forward
+#     mass helps the robot pitch over obstacles.
 #
 # Units: meters, kilograms, kg*m^2, degrees, N*m. Quaternions are (w, x, y, z).
 # Every body frame sits at the joint that connects it to its parent, so `pos` is
@@ -22,20 +25,26 @@
 
 start_pos: [0, 0, 0.5]
 
+# Short segment. Frame at its center. The waist is on the +x face.
 back_torso:
-  inertial: {pos: [0, 0, 0], mass: 36.0, diaginertia: [0.2372, 0.7320, 0.7748]}
+  inertial: {pos: [0, 0, 0], mass: 18.0, diaginertia: [0.1186, 0.1836, 0.2050]}
   col:
-    - {type: box, size: [0.23, 0.15, 0.09], pos: [0, 0, 0]}
+    - {type: box, size: [0.15, 0.15, 0.09], pos: [0, 0, 0]}
 
+# Long segment. Frame at the waist, on this segment's rear face, so the box
+# center sits half a length (0.23 m) forward. The 0.1754 m waist position is
+# the short segment's front face (0.15 m) plus the 0.0254 m inter-segment gap.
 front_torso:
-  pos: [0.2554, 0, 0]
-  inertial: {pos: [0.15, 0, 0], mass: 18.0, diaginertia: [0.1186, 0.1836, 0.2050]}
+  pos: [0.1754, 0, 0]
+  inertial: {pos: [0.23, 0, 0], mass: 36.0, diaginertia: [0.2372, 0.7320, 0.7748]}
   col:
-    - {type: box, size: [0.15, 0.15, 0.09], pos: [0.15, 0, 0]}
+    - {type: box, size: [0.23, 0.15, 0.09], pos: [0.23, 0, 0]}
 
 thigh:
-  pos_back: [-0.108, 0.15, 0]
-  pos_front: [0.177, 0.15, 0]
+  # Hips stay near the outer end of each segment, opposite the waist.
+  # Short: 0.027 m aft of center. Long: 0.108 m forward of its center.
+  pos_back: [-0.027, 0.15, 0]
+  pos_front: [0.338, 0.15, 0]
   inertial: {pos: [0, 0.04, -0.09], mass: 3.375, diaginertia: [0.01046, 0.01046, 0.0027]}
   col:
     - {type: capsule, size: [0.04, 0.09], pos: [0, 0.04, -0.09]}
