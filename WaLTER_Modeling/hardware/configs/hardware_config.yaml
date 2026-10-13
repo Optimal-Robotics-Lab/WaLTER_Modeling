@@ -27,6 +27,7 @@ start_pos: [0, 0, 0.5]
 
 # Short segment. Frame at its center. The waist is on the +x face.
 back_torso:
+mass: 18.79 #kg
   inertial: {pos: [0, 0, 0], mass: 18.0, diaginertia: [0.1186, 0.1836, 0.2050]}
   col:
     - {type: box, size: [0.15, 0.15, 0.09], pos: [0, 0, 0]}
@@ -35,6 +36,7 @@ back_torso:
 # center sits half a length (0.23 m) forward. The 0.1754 m waist position is
 # the short segment's front face (0.15 m) plus the 0.0254 m inter-segment gap.
 front_torso:
+  mass: 25.91 #kg
   pos: [0.1754, 0, 0]
   inertial: {pos: [0.23, 0, 0], mass: 36.0, diaginertia: [0.2372, 0.7320, 0.7748]}
   col:
@@ -43,6 +45,7 @@ front_torso:
 thigh:
   # Hips stay near the outer end of each segment, opposite the waist.
   # Short: 0.027 m aft of center. Long: 0.108 m forward of its center.
+  mass: 5.25
   pos_back: [-0.027, 0.15, 0]
   pos_front: [0.338, 0.15, 0]
   inertial: {pos: [0, 0.04, -0.09], mass: 3.375, diaginertia: [0.01046, 0.01046, 0.0027]}
@@ -69,6 +72,7 @@ thigh:
 
 shin:
   # Knee pad center, on its outboard face, expressed in the thigh body frame.
+  mass: 5.76 #kg
   pos: [0, 0.057673, -0.180975]
   inertial: {pos: [0, 0, 0], mass: 1.2, diaginertia: [0.00096, 0.005146, 0.005146]}
   col:
@@ -80,6 +84,7 @@ shin:
     quat: [1, 0, 0, 0]
 
 wheel:
+  mass: 1.59 #kg
   # Axles at the centers of the shin's rounded ends; wheels mount on the shin's outer face.
   pos_axle1: [0.1137, 0.0471, 0]
   pos_axle2: [-0.1137, 0.0471, 0]

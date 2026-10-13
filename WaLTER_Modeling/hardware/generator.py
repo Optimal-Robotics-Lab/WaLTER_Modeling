@@ -335,10 +335,6 @@ class HardwareModel:
                 right_mesh=geom_config.get("mesh_right"),
             )
         else:
-            # Primitive sizes vary in length (sphere 1, capsule/cylinder 2, box 3),
-            # but MuJoCo always stores three entries. An ellipsoid needs three
-            # positive radii. Two entries keep the cylinder convention — radius,
-            # then half-length along z — so a wheel can change type and keep its size.
             size = list(geom_config["size"])
             if geom_type == "ellipsoid" and len(size) == 2:
                 size = [size[0], size[0], size[1]]
