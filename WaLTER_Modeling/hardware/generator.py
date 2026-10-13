@@ -5,6 +5,7 @@ comes from ``WaLTER_Modeling.naming``. Each body frame sits at the joint that
 connects it to its parent, which matches how CAD meshes are exported.
 """
 
+import warnings
 from pathlib import Path
 
 import mujoco
@@ -67,9 +68,25 @@ class HardwareModel:
     Exposes the same attributes as ``ParametricModel``: ``spec`` (editable
     ``MjSpec``, for example to add a floor before recompiling), ``mj_model``
     (compiled model), and ``model_xml`` (MJCF string).
+
+    ``inertia_from_visual`` selects the inertia source. False uses the explicit
+    ``inertial`` entries. True assigns each body's ``mass`` to its visual geom
+    and lets MuJoCo infer inertia from a uniform density over that shape.
+    ``convex_mesh_files`` lists visual meshes that were not closed volumes, so
+    their inertia came from the convex hull instead of the exact mesh.
     """
 
-    def __init__(self, config_path: str | Path = DEFAULT_CONFIG, waist_locked: bool = False) -> None:
+    def __init__(
+        self,
+        config_path: str | Path = DEFAULT_CONFIG,
+        waist_locked: bool = False,
+        inertia_from_visual: bool = False,
+    ) -> None:
+        self.inertia_from_visual = inertia_from_visual
+        self.convex_mesh_files: list[str] = []
+        self._mesh_inertia: dict[
+            tuple[str, tuple[float, ...] | None], mujoco.mjtMeshInertia
+        ] = {}
         self.config = yaml.safe_load(Path(config_path).read_text())
 
         self.spec = mujoco.MjSpec()
@@ -80,8 +97,8 @@ class HardwareModel:
         self._added_meshes: set[str] = set()
         self._add_wheel_material()
 
-        # Visual and contact geometry get separate default classes so visual meshes
-        # never collide and no geom ever contributes mass; bodies set mass explicitly.
+        # Visual meshes never collide. Density stays 0 so a geom contributes mass
+        # only when inertia_from_visual assigns an explicit mass to a visual geom.
         self.visual_class = self.spec.add_default("visual", self.spec.default)
         self.visual_class.geom.group = VISUAL_GROUP
         self.visual_class.geom.contype = 0
@@ -101,6 +118,15 @@ class HardwareModel:
 
         self.mj_model = self.spec.compile()
         self.model_xml = self.spec.to_xml()
+        if self.convex_mesh_files:
+            files = ", ".join(self.convex_mesh_files)
+            warnings.warn(
+                "These visual meshes are not closed, well-oriented volumes, so "
+                "inertia uses the convex hull instead of the exact mesh: "
+                f"{files}. Repair those files to use exact mass distribution.",
+                UserWarning,
+                stacklevel=2,
+            )
 
     def _add_wheel_material(self) -> None:
         """RGB texture shared by every wheel visual. Nothing here affects contact."""
@@ -126,7 +152,6 @@ class HardwareModel:
     def _build_robot(self) -> None:
         config = self.config
         waist_config = config["joints"]["waist"]
-        
 
         # Root: the back torso carries the free joint, so it defines the base frame.
         back_torso = self.spec.worldbody.add_body(
@@ -258,13 +283,27 @@ class HardwareModel:
         body_config: dict,
         mirrored: bool,
     ) -> None:
-        """Adds the explicit inertial, collision geoms, and visual geoms to a body."""
-        # Inertial: set explicitly from CAD or measurements, never inferred from geoms.
-        inertial = body_config["inertial"]
-        body.explicitinertial = True
-        body.mass = inertial["mass"]
-        body.ipos = mirror_position(inertial["pos"], mirrored)
-        body.inertia = inertial["diaginertia"]
+        """Adds inertia, collision geoms, and visual geoms to a body.
+
+        With ``inertia_from_visual``, the config ``mass`` is placed on the visual
+        geom and MuJoCo infers the body inertia. Otherwise the explicit inertial
+        is copied through and no geom contributes mass.
+        """
+        link_mass = None
+        if self.inertia_from_visual:
+            if "mass" not in body_config:
+                raise ValueError(
+                    f"Body '{body.name}' needs a mass to infer inertia from its "
+                    "visual geometry."
+                )
+            link_mass = float(body_config["mass"])
+        else:
+            # Explicit inertial from CAD or measurements. Geoms stay massless.
+            inertial = body_config["inertial"]
+            body.explicitinertial = True
+            body.mass = inertial["mass"]
+            body.ipos = mirror_position(inertial["pos"], mirrored)
+            body.inertia = inertial["diaginertia"]
 
         # Collision geoms: indexed only when a body has more than one.
         collision_configs = body_config["col"]
@@ -298,11 +337,23 @@ class HardwareModel:
             if visual_config["mesh"] == WHEEL_VIS_MESH:
                 geom.material = WHEEL_MATERIAL
                 geom.rgba = [1.0, 1.0, 1.0, 1.0]
+            if link_mass is not None:
+                geom.mass = link_mass
             return
 
+        visual_geoms = []
         for index, geom_config in enumerate(collision_configs):
             name = naming.geom(body.name, naming.VIS, index if has_multiple else None)
-            self._add_geom(body, self.visual_class, name, geom_config, mirrored)
+            visual_geoms.append(
+                (
+                    geom_config,
+                    self._add_geom(
+                        body, self.visual_class, name, geom_config, mirrored
+                    ),
+                )
+            )
+        if link_mass is not None:
+            self._assign_visual_mass(body.name, visual_geoms, link_mass)
 
     def _add_geom(
         self,
@@ -387,5 +438,126 @@ class HardwareModel:
         mesh_asset = self.spec.add_mesh(name=asset_name, file=relative_file.as_posix())
         if mirror_scale is not None:
             mesh_asset.scale = mirror_scale
+        # Exact volume when the mesh is a closed solid. A mirrored copy is probed
+        # on its own because the negative scale reverses triangle winding.
+        if self.inertia_from_visual and kind == naming.VIS:
+            mesh_asset.inertia = self._visual_mesh_inertia(relative_file, mirror_scale)
         self._added_meshes.add(asset_name)
         return asset_name
+
+    def _visual_mesh_inertia(
+        self,
+        relative_file: Path,
+        scale: list[float] | None,
+    ) -> mujoco.mjtMeshInertia:
+        """Picks exact mesh inertia, or the convex hull when exact cannot compile."""
+        scale_key = tuple(scale) if scale is not None else None
+        key = (relative_file.as_posix(), scale_key)
+        cached = self._mesh_inertia.get(key)
+        if cached is not None:
+            return cached
+
+        exact = mujoco.mjtMeshInertia.mjMESH_INERTIA_EXACT
+        convex = mujoco.mjtMeshInertia.mjMESH_INERTIA_CONVEX
+        exact_error = self._mesh_inertia_error(relative_file, scale, exact)
+        if exact_error is None:
+            self._mesh_inertia[key] = exact
+            return exact
+
+        convex_error = self._mesh_inertia_error(relative_file, scale, convex)
+        if convex_error is None:
+            if relative_file.as_posix() not in self.convex_mesh_files:
+                self.convex_mesh_files.append(relative_file.as_posix())
+            self._mesh_inertia[key] = convex
+            return convex
+
+        raise ValueError(
+            f"Visual mesh '{relative_file.as_posix()}' cannot provide inertia. "
+            f"Exact volume failed ({exact_error}). Convex hull failed ({convex_error})."
+        )
+
+    def _mesh_inertia_error(
+        self,
+        relative_file: Path,
+        scale: list[float] | None,
+        inertia: mujoco.mjtMeshInertia,
+    ) -> str | None:
+        """Compiles the mesh alone. Returns the compiler error, or None on success."""
+        spec = mujoco.MjSpec()
+        spec.meshdir = str(MESH_DIR)
+        mesh = spec.add_mesh(
+            name="probe",
+            file=relative_file.as_posix(),
+            inertia=inertia,
+        )
+        if scale is not None:
+            mesh.scale = scale
+        # A free joint makes this a moving body, so a bad volume fails here
+        # instead of inside the full robot compile.
+        body = spec.worldbody.add_body(name="probe_body", pos=[0.0, 0.0, 1.0])
+        body.add_freejoint()
+        body.add_geom(
+            type=mujoco.mjtGeom.mjGEOM_MESH,
+            meshname="probe",
+            mass=1.0,
+        )
+        try:
+            spec.compile()
+        except ValueError as error:
+            return str(error)
+        return None
+
+    def _assign_visual_mass(
+        self,
+        body_name: str,
+        visual_geoms: list[tuple[dict, mujoco.MjsGeom]],
+        link_mass: float,
+    ) -> None:
+        """Puts ``link_mass`` on the visual geoms, split by volume if needed.
+
+        One geom, including a mesh, receives the whole mass. MuJoCo then spreads
+        that mass uniformly through the geom.
+        """
+        if len(visual_geoms) == 1:
+            visual_geoms[0][1].mass = link_mass
+            return
+
+        volumes = [
+            self._primitive_volume(body_name, geom_config)
+            for geom_config, _ in visual_geoms
+        ]
+        total_volume = sum(volumes)
+        if total_volume <= 0:
+            raise ValueError(
+                f"Body '{body_name}' visual geoms have no volume to carry mass."
+            )
+        for (_, geom), volume in zip(visual_geoms, volumes, strict=True):
+            geom.mass = link_mass * volume / total_volume
+
+    def _primitive_volume(self, body_name: str, geom_config: dict) -> float:
+        """Volume of a collision primitive. MuJoCo sizes are half-extents."""
+        geom_type = geom_config["type"]
+        size = list(geom_config["size"])
+        if geom_type == "ellipsoid" and len(size) == 2:
+            size = [size[0], size[0], size[1]]
+        if geom_type == "box":
+            half_x, half_y, half_z = size
+            return 8.0 * half_x * half_y * half_z
+        if geom_type == "sphere":
+            radius = size[0]
+            return 4.0 / 3.0 * np.pi * radius**3
+        if geom_type == "ellipsoid":
+            radius_x, radius_y, radius_z = size
+            return 4.0 / 3.0 * np.pi * radius_x * radius_y * radius_z
+        if geom_type == "cylinder":
+            radius, half_length = size[0], size[1]
+            return np.pi * radius**2 * (2.0 * half_length)
+        if geom_type == "capsule":
+            radius, half_length = size[0], size[1]
+            cylinder = np.pi * radius**2 * (2.0 * half_length)
+            caps = 4.0 / 3.0 * np.pi * radius**3
+            return cylinder + caps
+        raise ValueError(
+            f"Body '{body_name}' has several visual geoms, and '{geom_type}' "
+            "has no primitive volume to split the link mass across."
+        )

@@ -43,6 +43,43 @@ def test_legs_attach_to_the_torso_half_they_belong_to() -> None:
         assert model.jnt_bodyid[knee_id] == _body_id(model, f"{leg}_shin")
 
 
+def test_visual_mass_is_optional_and_uses_exact_mesh_volume() -> None:
+    """The default keeps authored inertials. The switch uses each link mass."""
+    explicit = HardwareModel()
+    visual = HardwareModel(inertia_from_visual=True)
+
+    assert explicit.convex_mesh_files == []
+    assert visual.convex_mesh_files == []
+    legacy = mujoco.mjtMeshInertia.mjMESH_INERTIA_LEGACY
+    exact = mujoco.mjtMeshInertia.mjMESH_INERTIA_EXACT
+    assert all(int(mesh.inertia) == int(legacy) for mesh in explicit.spec.meshes)
+    assert all(int(mesh.inertia) == int(exact) for mesh in visual.spec.meshes)
+
+    # Authored inertials stay in place until the switch is turned on.
+    explicit_model = explicit.mj_model
+    assert explicit_model.body_mass[_body_id(explicit_model, "fl_thigh")] == 3.375
+    assert explicit_model.body_mass[_body_id(explicit_model, "back_torso")] == 18.0
+
+    expected_mass = {
+        "back_torso": 18.79,
+        "front_torso": 25.91,
+        "fl_thigh": 5.25,
+        "fr_thigh": 5.25,
+        "fl_shin": 5.76,
+        "fl_wheel1": 1.59,
+        "fr_wheel2": 1.59,
+    }
+    for name, mass in expected_mass.items():
+        body_id = _body_id(visual.mj_model, name)
+        assert abs(float(visual.mj_model.body_mass[body_id]) - mass) < 1e-9
+
+    # The mesh distribution is not the placeholder diagonal inertia.
+    fl_thigh = _body_id(visual.mj_model, "fl_thigh")
+    assert not np.allclose(
+        visual.mj_model.body_inertia[fl_thigh], [0.01046, 0.01046, 0.0027]
+    )
+
+
 def test_back_torso_has_its_own_geoms() -> None:
     model = HardwareModel().mj_model
     back_torso = _body_id(model, "back_torso")
