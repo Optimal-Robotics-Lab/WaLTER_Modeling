@@ -80,7 +80,7 @@ class HardwareModel:
         self,
         config_path: str | Path = DEFAULT_CONFIG,
         waist_locked: bool = False,
-        inertia_from_visual: bool = False,
+        inertia_from_visual: bool = True,
     ) -> None:
         self.inertia_from_visual = inertia_from_visual
         self.convex_mesh_files: list[str] = []

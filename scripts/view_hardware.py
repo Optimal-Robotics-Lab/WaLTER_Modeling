@@ -18,7 +18,7 @@ LIGHT_POSITION = [0, 0, 5]
 
 
 def main() -> None:
-    walter = HardwareModel()
+    walter = HardwareModel(inertia_from_visual=True)
 
     # The hardware model has no environment of its own; add one before compiling.
     walter.spec.worldbody.add_geom(
