@@ -14,7 +14,6 @@ import mjviser.viewer as mjviser_viewer
 import mujoco
 
 from WaLTER_Modeling import HardwareModel
-from WaLTER_Modeling.hardware.viser_scene import PerBodyMujocoScene
 
 FLOOR_RGBA = [0.5, 0.8, 0.9, 1]
 # Zero x/y half-sizes render the plane as infinite; the third entry is the grid spacing.
@@ -35,11 +34,6 @@ def main() -> None:
 
     model = walter.spec.compile()
     data = mujoco.MjData(model)
-
-    # Viewer constructs its scene from this module global. Swap in the
-    # per-body scene before that happens so back legs and both wheels are
-    # listed, and so toggling one shin does not hide the other leg.
-    mjviser_viewer.ViserMujocoScene = PerBodyMujocoScene
 
     print("Open http://localhost:8080 in a browser. Press Ctrl+C here to stop.")
     print("Pause, then move a knee slider. That shin rotates on its own.")
