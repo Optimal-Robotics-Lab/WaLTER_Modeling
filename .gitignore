@@ -1,3 +1,10 @@
+# Generated model renders and exports
+renders/
+
+# MuJoCo files
+*.xml
+MUJOCO_LOG.TXT
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

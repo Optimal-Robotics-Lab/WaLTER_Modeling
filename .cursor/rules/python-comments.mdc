@@ -1,0 +1,46 @@
+---
+description: How to write comments and docstrings in Python, including the high-level comments David wants
+globs: **/*.py
+alwaysApply: false
+---
+
+# Python Comments and Docstrings
+
+Principle: **code explains what, comments explain why.** On top of that, this project wants **more high-level comments**, so a reader can follow the overall structure of a file or function without reading every line.
+
+## Required high-level comments
+- **Module docstring** at the top of every module: one to three sentences on what the module is for and how it fits into the package.
+- **Class docstring** on every public class: what it represents and its main usage, including the key attributes it exposes.
+- **Docstring on non-trivial public functions:** purpose plus anything the signature doesn't make obvious (units, frames, side effects). Don't repeat what the name and types already say.
+- **Section comments** in longer functions: put a short comment above each logical block naming the step and why it's there. The reader should be able to skim just these comments and get the algorithm.
+
+```python
+def _build(self) -> None:
+    # Root body: the back torso carries the free joint, so it defines the base frame.
+    ...
+    # Waist: passive spring-damper hinge; the front legs ride on the front torso.
+    ...
+    # Legs: front legs attach to the front torso, back legs to the back torso.
+    ...
+```
+
+## Low-level comments: explain why, never restate
+Write a comment when the code depends on any of these:
+- assumptions, physical constraints, or units;
+- mathematical conventions (frames, quaternion order, sign conventions), with equation or paper references where relevant;
+- non-obvious design decisions, workarounds, or numerical concerns.
+
+```python
+# Avoid: restates the code
+step += 1  # Increment step
+
+# Good: explains why
+# Clamp before scaling so commands stay inside the range used during
+# controller identification.
+command = np.clip(command, -1.0, 1.0)
+```
+
+## Avoid
+- Comments that narrate each line, or that will go stale as soon as the code changes.
+- Comments addressed to a reviewer ("changed this to fix X") or recording history. That belongs in git.
+- Using comments to make up for unclear names. Rename the variable instead.

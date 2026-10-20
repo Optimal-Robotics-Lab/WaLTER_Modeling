@@ -1,25 +1,21 @@
-import argparse
-from pathlib import Path
-from .ModelGenerator import GenerateModel
+"""Model generation for the WaLTER robot.
 
-CONFIG_ROOT = Path(__file__).parent / "parametric_configs"
-__all__ = ["GenerateModel", "CONFIG_ROOT", "config_dir", "main"]
+Two independent pipelines share this package: ``parametric`` (fully parameterized,
+WS and FS) and ``hardware`` (high-fidelity FS model of the real robot).
+"""
 
+from .cli import main
+from .hardware import HardwareModel
+from .parametric import CONFIG_ROOT, ParametricModel, config_dir
 
-def config_dir(full_scale: bool = False) -> Path:
-    return CONFIG_ROOT / ("FS" if full_scale else "WS")
+# Kept so code written against the original ModelGenerator API keeps working.
+GenerateModel = ParametricModel
 
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description="WaLTER Model Generator")
-    parser.add_argument("--fs", action="store_true", help="Generate FS instead of WS")
-    parser.add_argument("-o", "--output", type=Path, default=Path("WaLTER_Model.xml"), help="Path to write the generated MJCF XML")
-    args = parser.parse_args()
-
-    configs = config_dir(full_scale=args.fs)
-
-    generator = GenerateModel(
-        configs/"model_config.yaml",
-        configs/"motor_config.yaml",
-    )
-    args.output.write_text(generator.model_xml)
+__all__ = [
+    "ParametricModel",
+    "HardwareModel",
+    "GenerateModel",
+    "CONFIG_ROOT",
+    "config_dir",
+    "main",
+]
