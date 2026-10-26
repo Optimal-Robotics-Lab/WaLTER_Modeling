@@ -174,6 +174,8 @@ class HardwareModel:
                 range=waist_config["range"],
                 stiffness=waist_config.get("stiffness", 0),
                 damping=waist_config.get("damping", 0),
+                # Coulomb torque in N*m. Independent of the viscous damping above.
+                frictionloss=waist_config.get("frictionloss", 0),
             )
 
         self._add_body_contents(front_torso, config["front_torso"], mirrored=False)
@@ -258,6 +260,8 @@ class HardwareModel:
             name=joint_name,
             axis=joint_config["axis"],
             damping=joint_config.get("damping", 0),
+            # Coulomb torque in N*m. Independent of the viscous damping above.
+            frictionloss=joint_config.get("frictionloss", 0),
             armature=motor_config["rotor_inertia"] * gear_ratio**2,
         )
         if "range" in joint_config:

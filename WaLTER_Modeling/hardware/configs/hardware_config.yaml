@@ -3,11 +3,12 @@
 # Status of the values below:
 #   - Leg visual meshes and leg joint positions (knee, axles): estimated from the CAD
 #     meshes in assets/meshes/visual; values marked GUESS still need confirmation.
-#   - Torso geometry, hip positions, collision primitives, and inertials: PLACEHOLDERS
-#     from parametric/configs/FS, to be replaced with CAD-derived values.
-#     The long segment is the front torso here. The parametric model puts that
-#     segment at the root. Payloads mount on the long segment, and that forward
-#     mass helps the robot pitch over obstacles.
+#   - Torso visual meshes, the waist, and the hip positions: taken from the body
+#     meshes. Each mesh origin lies on the waist axis (mesh +z forward, mesh +y up,
+#     mesh +x to the left). The hip joints are the centers of the embossed side pads.
+#   - Torso collision primitives and the explicit inertials: PLACEHOLDERS from
+#     parametric/configs/FS. The long segment is the front torso. Payloads mount
+#     on that segment, and the forward mass helps the robot pitch over obstacles.
 #
 # Units: meters, kilograms, kg*m^2, degrees, N*m. Quaternions are (w, x, y, z).
 # Every body frame sits at the joint that connects it to its parent, so `pos` is
@@ -15,12 +16,12 @@
 # Leg values are given for the left legs; right legs are mirrored across the xz-plane.
 #
 # Geometry per body:
-#   mass:     link mass in kg. Used only when HardwareModel is built with
-#             inertia_from_visual=True, which spreads it uniformly through the
-#             visual geom (exact mesh volume, or the convex hull if the mesh
-#             is not a closed solid). Bodies without a vis mesh use the visual
-#             copy of their collision primitives.
-#   inertial: explicit mass properties. Used by default (inertia_from_visual=False);
+#   mass:     link mass in kg. Used when HardwareModel is built with
+#             inertia_from_visual=True (the default). MuJoCo spreads it uniformly
+#             through the visual geom (exact mesh volume, or the convex hull if
+#             the mesh is not a closed solid). Bodies without a vis mesh use the
+#             visual copy of their collision primitives.
+#   inertial: explicit mass properties. Used when inertia_from_visual=False;
 #             geoms do not contribute mass in that mode.
 #   col:      list of contact primitives; type is box | capsule | cylinder | sphere | ellipsoid | mesh
 #             (mesh entries name a file in assets/meshes/collision/ without the .obj extension)
@@ -31,29 +32,42 @@
 
 start_pos: [0, 0, 0.5]
 
-# Short segment. Frame at its center. The waist is on the +x face.
+# Short segment. Frame at mid-length, on the waist axis. The mesh origin is the
+# waist, so it sits on the +x face, half a length (0.164942 m) forward of the frame.
+# Quaternion (w, x, y, z) = (0.5, 0.5, 0.5, 0.5) is a 120 deg rotation about
+# (1, 1, 1): mesh +z -> body +x, mesh +x -> body +y, mesh +y -> body +z.
 back_torso:
   mass: 18.79 #kg
   inertial: {pos: [0, 0, 0], mass: 18.0, diaginertia: [0.1186, 0.1836, 0.2050]}
   col:
     - {type: box, size: [0.15, 0.15, 0.09], pos: [0, 0, 0]}
+  vis:
+    mesh: rearbody_vis_mesh
+    pos: [0.164942, 0, 0]
+    quat: [0.5, 0.5, 0.5, 0.5]
 
-# Long segment. Frame at the waist, on this segment's rear face, so the box
-# center sits half a length (0.23 m) forward. The 0.1754 m waist position is
-# the short segment's front face (0.15 m) plus the 0.0254 m inter-segment gap.
+# Long segment. Frame at the waist, which is this mesh's origin. The two waist
+# pilots are both centered on that origin, so the segments meet with no added gap.
+# Same mesh-to-body rotation as the rear segment.
 front_torso:
   mass: 25.91 #kg
-  pos: [0.1754, 0, 0]
+  pos: [0.164942, 0, 0]
   inertial: {pos: [0.23, 0, 0], mass: 36.0, diaginertia: [0.2372, 0.7320, 0.7748]}
   col:
     - {type: box, size: [0.23, 0.15, 0.09], pos: [0.23, 0, 0]}
+  vis:
+    mesh: frontbody_vis_mesh
+    pos: [0, 0, 0]
+    quat: [0.5, 0.5, 0.5, 0.5]
 
 thigh:
-  # Hips stay near the outer end of each segment, opposite the waist.
-  # Short: 0.027 m aft of center. Long: 0.108 m forward of its center.
+  # Hip joints are the centers of the embossed side pads, on the outer face
+  # (mesh x = ±0.150114 m, 5.91 in). Left-leg positions; right legs are mirrored.
+  # Rear pad: 1.67 mm aft of the segment center and 0.127 mm (0.005 in) below
+  # the waist axis. Front pad: 0.366624 m forward of the waist, at waist height.
   mass: 5.25
-  pos_back: [-0.027, 0.15, 0]
-  pos_front: [0.338, 0.15, 0]
+  pos_back: [-0.001670, 0.150114, -0.000127]
+  pos_front: [0.366624, 0.150114, 0]
   inertial: {pos: [0, 0.04, -0.09], mass: 3.375, diaginertia: [0.01046, 0.01046, 0.0027]}
   # Inboard of the wheels. The cylinder runs from the hip (z = 0) to z = -0.08;
   # each end cap adds the 0.03 m radius. The wheels sit beside the knee and
@@ -73,7 +87,7 @@ thigh:
   # on the hip joint.
   vis:
     mesh: thigh_vis_mesh
-    pos: [0, 0.039448, 0]
+    pos: [0, 0.00, 0]
     quat: [0, 0, 0.7071068, 0.7071068]
 
 shin:
@@ -115,11 +129,15 @@ wheel:
     pos: [0, 0, 0]
     quat: [0.7071068, -0.7071068, 0, 0]
 
+# damping is viscous, N*m/(rad/s). frictionloss is dry Coulomb friction, N*m,
+# and does not depend on joint speed. MuJoCo applies it as a force constraint,
+# so the torque bound stays well-defined at zero velocity. 0 is no dry friction.
+# One entry covers every joint of that type (four hips, four knees, eight axles).
 joints:
-  waist: {axis: [1, 0, 0], range: [-25, 25], stiffness: 10, damping: 1}
-  hip: {axis: [0, 1, 0], damping: 2}
-  knee: {axis: [0, 1, 0], damping: 2}
-  axle: {axis: [0, 1, 0], damping: 2}
+  waist: {axis: [1, 0, 0], range: [-25, 25], stiffness: 10, damping: 1, frictionloss: 0.0}
+  hip: {axis: [0, 1, 0], damping: 2, frictionloss: 15.84}
+  knee: {axis: [0, 1, 0], damping: 2, frictionloss: 7.71}
+  axle: {axis: [0, 1, 0], damping: 2, frictionloss: 0.8}
 
 # Joint armature = rotor_inertia * gear_ratio^2.
 # stall_torque is motor-side; the actuator's joint torque limit is stall_torque * gear_ratio.
