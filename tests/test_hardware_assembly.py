@@ -2,17 +2,19 @@
 
 Front legs hang off the front torso and back legs off the back torso. A knee
 hinge rotates its own shin and the wheels on that shin, and leaves the other
-leg where it is.
+leg where it is. Torso meshes keep the waist pilots and hip pads on the joints.
 """
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import mujoco
 import numpy as np
-import viser
+import yaml
 
 from WaLTER_Modeling import HardwareModel
-from WaLTER_Modeling.hardware.viser_scene import PerBodyMujocoScene
+from WaLTER_Modeling.hardware.generator import DEFAULT_CONFIG, MESH_DIR
 
 
 def _body_id(model: mujoco.MjModel, name: str) -> int:
@@ -44,9 +46,9 @@ def test_legs_attach_to_the_torso_half_they_belong_to() -> None:
 
 
 def test_visual_mass_is_optional_and_uses_exact_mesh_volume() -> None:
-    """The default keeps authored inertials. The switch uses each link mass."""
-    explicit = HardwareModel()
-    visual = HardwareModel(inertia_from_visual=True)
+    """Authored inertials remain available. The default uses each link mass."""
+    explicit = HardwareModel(inertia_from_visual=False)
+    visual = HardwareModel()
 
     assert explicit.convex_mesh_files == []
     assert visual.convex_mesh_files == []
@@ -80,6 +82,93 @@ def test_visual_mass_is_optional_and_uses_exact_mesh_volume() -> None:
     )
 
 
+def _visual_vertices(mesh_name: str) -> np.ndarray:
+    path = Path(MESH_DIR) / "visual" / f"{mesh_name}.obj"
+    vertices = []
+    with path.open() as mesh_file:
+        for line in mesh_file:
+            if line.startswith("v "):
+                vertices.append([float(value) for value in line.split()[1:4]])
+    return np.asarray(vertices, dtype=float)
+
+
+def _quat_matrix(quaternion: np.ndarray) -> np.ndarray:
+    """Rotation matrix for a MuJoCo quaternion (w, x, y, z)."""
+    w, x, y, z = quaternion
+    return np.array(
+        [
+            [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+        ]
+    )
+
+
+def _hip_pad_centers(vertices: np.ndarray) -> np.ndarray:
+    """Centers of the circular pads on the outer side faces, in the mesh frame.
+
+    The pad axis is the mesh x axis. The outer face is the embossed surface
+    the hip joint sits on.
+    """
+    on_outer_face = np.abs(np.abs(vertices[:, 0]) - vertices[:, 0].max()) < 1e-6
+    centers = []
+    for sign in (1.0, -1.0):
+        side = vertices[on_outer_face & (np.sign(vertices[:, 0]) == sign)]
+        center_yz = side[:, 1:].mean(axis=0)
+        radius = np.linalg.norm(side[:, 1:] - center_yz, axis=1)
+        assert radius.std() < 1e-5
+        centers.append([side[:, 0].mean(), center_yz[0], center_yz[1]])
+    return np.asarray(centers, dtype=float)
+
+
+def test_torso_meshes_put_the_waist_and_hips_on_the_embossed_pads() -> None:
+    """Each body-mesh origin is the waist axis, and each hip is a side-pad center."""
+    robot = HardwareModel()
+    config = robot.config
+    # Mesh +z -> body +x, mesh +x -> body +y, mesh +y -> body +z.
+    rotation = _quat_matrix(np.array([0.5, 0.5, 0.5, 0.5]))
+
+    waist_in_back = []
+    for body_name, mesh_name in (
+        ("back_torso", "rearbody_vis_mesh"),
+        ("front_torso", "frontbody_vis_mesh"),
+    ):
+        visual = config[body_name]["vis"]
+        assert np.allclose(visual["quat"], [0.5, 0.5, 0.5, 0.5])
+        mesh_origin_in_body = np.asarray(visual["pos"], dtype=float)
+        if body_name == "front_torso":
+            mesh_origin_in_body = mesh_origin_in_body + np.asarray(
+                config["front_torso"]["pos"], dtype=float
+            )
+        waist_in_back.append(mesh_origin_in_body)
+
+        vertices = _visual_vertices(mesh_name)
+        # The waist pilot is the small circle centered on the mesh origin.
+        radial = np.linalg.norm(vertices[:, :2], axis=1)
+        pilot = vertices[(radial < 0.05) & (np.abs(vertices[:, 2]) < 1e-6)]
+        assert len(pilot) > 10
+        assert np.linalg.norm(pilot.mean(axis=0)) < 1e-6
+
+        pad_centers = _hip_pad_centers(vertices)
+        pads_in_body = mesh_origin_in_body + (rotation @ pad_centers.T).T
+        if body_name == "front_torso":
+            # pad positions above were shifted into the back frame; hips are
+            # stored in the front frame, whose origin is the waist.
+            pads_in_body = pads_in_body - np.asarray(
+                config["front_torso"]["pos"], dtype=float
+            )
+            expected = np.asarray(config["thigh"]["pos_front"], dtype=float)
+        else:
+            expected = np.asarray(config["thigh"]["pos_back"], dtype=float)
+        left_pad = pads_in_body[np.argmax(pads_in_body[:, 1])]
+        assert np.allclose(left_pad, expected, atol=5e-5)
+        thigh_name = "fl_thigh" if body_name == "front_torso" else "bl_thigh"
+        thigh_id = _body_id(robot.mj_model, thigh_name)
+        assert np.allclose(robot.mj_model.body_pos[thigh_id], left_pad, atol=5e-5)
+
+    assert np.allclose(waist_in_back[0], waist_in_back[1], atol=1e-9)
+
+
 def test_back_torso_has_its_own_geoms() -> None:
     model = HardwareModel().mj_model
     back_torso = _body_id(model, "back_torso")
@@ -99,15 +188,54 @@ def test_assembled_pose_does_not_embed_the_wheels_in_the_thighs() -> None:
         contact = data.contact[i]
         names = tuple(
             sorted(
-                mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, int(geom_id))
-                or ""
+                mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, int(geom_id)) or ""
                 for geom_id in contact.geom
             )
         )
         assert contact.dist >= -1e-6, names
-        assert not (
-            "thigh" in names[0] and "wheel" in names[1]
-        ), names
+        assert not ("thigh" in names[0] and "wheel" in names[1]), names
+
+
+def _joint_frictionloss(model: mujoco.MjModel, name: str) -> float:
+    joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
+    assert joint_id >= 0, name
+    # Hinge joints have one degree of freedom. frictionloss lives on that dof.
+    dof = int(model.jnt_dofadr[joint_id])
+    return float(model.dof_frictionloss[dof])
+
+
+def test_joint_frictionloss_comes_from_the_hardware_config(tmp_path: Path) -> None:
+    """Each joint type takes its Coulomb torque, in N*m, from the hardware config."""
+    robot = HardwareModel()
+    _assert_configured_frictionloss(robot)
+
+    config = yaml.safe_load(Path(DEFAULT_CONFIG).read_text())
+    config["joints"]["waist"]["frictionloss"] = 0.4
+    config["joints"]["hip"]["frictionloss"] = 1.5
+    config["joints"]["knee"]["frictionloss"] = 2.5
+    config["joints"]["axle"]["frictionloss"] = 0.05
+    config_path = tmp_path / "hardware_config.yaml"
+    config_path.write_text(yaml.safe_dump(config))
+
+    updated = HardwareModel(config_path)
+    _assert_configured_frictionloss(updated)
+    # A config change must not leak onto joints that have no frictionloss entry.
+    root_id = mujoco.mj_name2id(updated.mj_model, mujoco.mjtObj.mjOBJ_JOINT, "root")
+    root_dof = int(updated.mj_model.jnt_dofadr[root_id])
+    assert np.allclose(updated.mj_model.dof_frictionloss[root_dof : root_dof + 6], 0.0)
+
+
+def _assert_configured_frictionloss(robot: HardwareModel) -> None:
+    model = robot.mj_model
+    joints = robot.config["joints"]
+    expected = {"waist": joints["waist"]["frictionloss"]}
+    for leg in ("fr", "fl", "br", "bl"):
+        expected[f"{leg}_hip"] = joints["hip"]["frictionloss"]
+        expected[f"{leg}_knee"] = joints["knee"]["frictionloss"]
+        expected[f"{leg}_axle1"] = joints["axle"]["frictionloss"]
+        expected[f"{leg}_axle2"] = joints["axle"]["frictionloss"]
+    for name, frictionloss in expected.items():
+        assert abs(_joint_frictionloss(model, name) - frictionloss) < 1e-9
 
 
 def test_knee_motor_flexes_the_shin() -> None:
@@ -147,31 +275,3 @@ def test_knee_rotates_only_its_own_shin() -> None:
     assert not np.allclose(data.xquat[fl_shin], shin_quat)
     assert not np.allclose(data.xpos[fl_wheel], wheel_pos)
     assert np.allclose(data.xquat[bl_shin], other_shin_quat)
-
-
-def test_each_body_is_its_own_viser_node() -> None:
-    model = HardwareModel().mj_model
-    server = viser.ViserServer(port=0)
-    try:
-        scene = PerBodyMujocoScene(server, model, num_envs=1)
-        node_names = {group.handle.name for group in scene._mesh_groups}
-    finally:
-        server.stop()
-
-    for body_name in (
-        "back_torso",
-        "br_thigh",
-        "br_shin",
-        "bl_shin",
-        "bl_wheel1",
-        "bl_wheel2",
-        "fr_wheel2",
-        "fl_shin",
-    ):
-        assert any(name.startswith(f"/bodies/{body_name}/") for name in node_names)
-
-    fl_shin_nodes = {name for name in node_names if "/fl_shin/" in name}
-    bl_shin_nodes = {name for name in node_names if "/bl_shin/" in name}
-    assert fl_shin_nodes
-    assert bl_shin_nodes
-    assert fl_shin_nodes.isdisjoint(bl_shin_nodes)

@@ -5,11 +5,14 @@ outside, out to where the tire face turns flat, samples a semi-offroad tread.
 Only the shallow hub recess on the outboard face samples the gray metal disk.
 MuJoCo uses the OBJ texture coordinates as-is (v up, matching the image).
 The CAD file's original coordinates do not follow the tire, so this rewrites
-them. Re-run from the repo root after a CAD re-export:
+them. After a CAD re-export, rebake coordinates and leave the atlas image:
 
-    uv run python scripts/make_wheel_texture.py
+    uv run python scripts/make_wheel_texture.py --uvs-only
+
+Omit ``--uvs-only`` to regenerate assets/textures/wheel.png as well.
 """
 
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -33,11 +36,15 @@ TEX_W = 2048
 TEX_H = 1024
 # Top-left square. The image is 2:1, so this square is 0.25 in u and 0.50 in v.
 FACE_SIZE = 512
-# The recess lip is at about 0.073 m. A slightly larger radius keeps that lip
-# on metal instead of the rubber corners of the square.
+# Lip of the outboard recess is at r = 0.073533 m. Mapping a slightly larger
+# radius onto the square edge keeps that lip on the metal disk; the corners
+# of the square are rubber.
 FACE_RADIUS = 0.078
-# Faces inside this cylinder, on the outboard side, are the modeled hub pocket.
+# Pocket floor is the disk at z = 0.076200, r = 0.071946. The lip wall between
+# that floor and the sidewall at z = 0.077787 reaches r = 0.073533. A larger
+# radius on the outboard face is the flat tire sidewall, which stays rubber.
 HUB_MAX_RADIUS = 0.0742
+# Above the last tread station (z = 0.071439) and below the pocket floor.
 HUB_MIN_Z = 0.075
 # Flat side faces share one rubber texel, off the hub square and the tread strip.
 RUBBER_COL = 1500
@@ -53,7 +60,10 @@ GROOVE = np.array([6, 6, 7], dtype=np.float64)
 BLOCK = np.array([62, 58, 52], dtype=np.float64)
 
 # Mesh z of the rounded outside, inboard shoulder to outboard shoulder.
-TREAD_Z = (0.0, 0.078)
+# Those shoulders are the outer edges of the flat sidewalls: z = -0.001588
+# inboard (the axle face itself is at z = 0) and z = 0.077787 outboard.
+# The crown sits on the midplane of this span.
+TREAD_Z = (-0.001588, 0.077787)
 
 
 def _v_of_row(row: float) -> float:
@@ -374,12 +384,24 @@ def _load_vertices(mesh_path: Path) -> np.ndarray:
     return np.asarray(vertices, dtype=np.float64)
 
 
-def main() -> None:
-    image = make_wheel_texture()
-    TEXTURE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(image).save(TEXTURE_PATH)
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        description="Bake wheel texture coordinates, and optionally rewrite the atlas."
+    )
+    parser.add_argument(
+        "--uvs-only",
+        action="store_true",
+        help="Rewrite mesh texture coordinates and leave wheel.png unchanged.",
+    )
+    args = parser.parse_args(argv)
+    # CAD re-exports change the mesh, not the atlas. --uvs-only leaves wheel.png
+    # in place; the default still rebuilds both, as before.
+    if not args.uvs_only:
+        image = make_wheel_texture()
+        TEXTURE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        Image.fromarray(image).save(TEXTURE_PATH)
+        print(f"Wrote {TEXTURE_PATH.relative_to(REPO_ROOT)}")
     counts = bake_wheel_uvs(_load_vertices(MESH_PATH), MESH_PATH)
-    print(f"Wrote {TEXTURE_PATH.relative_to(REPO_ROOT)}")
     print(f"Updated UVs in {MESH_PATH.relative_to(REPO_ROOT)}: {counts}")
 
 
