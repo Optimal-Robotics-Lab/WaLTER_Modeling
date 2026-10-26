@@ -21,6 +21,7 @@ WaLTER_Modeling/
     assets/meshes/visual, assets/meshes/collision
 docs/
   naming_convention.md
+  joint_actuator_modeling.md
 scripts/
   view_parametric.py
   view_hardware.py
@@ -67,6 +68,8 @@ MUJOCO_GL=glfw uv run python scripts/render_hardware.py --focus fl_shin --distan
 ## Naming convention
 
 All new models follow [docs/naming_convention.md](docs/naming_convention.md). The hardware model uses it already. The parametric model still uses its original names and will be migrated.
+
+Joint and actuator parameters are in [docs/joint_actuator_modeling.md](docs/joint_actuator_modeling.md).
 
 ## Code standards
 
