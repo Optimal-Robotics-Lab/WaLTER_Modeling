@@ -22,7 +22,7 @@ LIGHT_POSITION = [0, 0, 5]
 
 
 def main() -> None:
-    walter = HardwareModel()
+    walter = HardwareModel(roofrack=True)
 
     # The hardware model has no environment of its own; add one before compiling.
     walter.spec.worldbody.add_geom(
