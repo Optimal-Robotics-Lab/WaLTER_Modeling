@@ -139,9 +139,9 @@ wheel:
 # placeholder, the same number on every actuated joint, not a datasheet value.
 joints:
   waist: {axis: [1, 0, 0], range: [-25, 25], stiffness: 10, damping: 1, frictionloss: 0.0}
-  hip: {axis: [0, 1, 0], damping: 2, frictionloss: 15.84}
-  knee: {axis: [0, 1, 0], damping: 2, frictionloss: 7.71}
-  axle: {axis: [0, 1, 0], damping: 2, frictionloss: 0.8}
+  hip: {axis: [0, 1, 0], damping: 2, frictionloss: 30}
+  knee: {axis: [0, 1, 0], damping: 2, frictionloss: 14}
+  axle: {axis: [0, 1, 0], damping: 2, frictionloss: 1.0}
 
 # AIO-output frame. ctrl and stall_torque are CubeMars output torque (MIT t_ff),
 # N*m, not motor-shaft torque. gear_ratio is only the external stage, so the
