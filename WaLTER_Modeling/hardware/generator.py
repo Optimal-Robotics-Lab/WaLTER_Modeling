@@ -51,6 +51,20 @@ QUATERNION_MIRROR_Y = np.array([1.0, -1.0, 1.0, -1.0])
 # reflected in its own frame: M (p + R v) = M p + (M R M)(M v), with M = diag(1, -1, 1).
 MESH_MIRROR_SCALE = [1.0, -1.0, 1.0]
 
+# Roof rack visual, from the FreeCAD export (origin left at the waist, meters).
+# In the mesh, +y is up off the mounting flange at y = 0, and the raked nose is
+# the -x end. Body frame is +x forward, +y left, +z up, so the quaternion below
+# sends mesh -x forward and mesh +y up: mesh (x, y, z) -> body (-x, z, y).
+# The position's z is the front-body top plane, so that flange sits on the deck.
+ROOFRACK_MESH = "roofrack_vis_mesh"
+# 5 lbf-mass. MuJoCo mass is kilograms; the factor is the exact pound avoirdupois.
+ROOFRACK_MASS_KG = 5 * 0.45359237
+FRONT_BODY_TOP_Z = 0.073025
+ROOFRACK_POS = [0.0, 0.0, FRONT_BODY_TOP_Z]
+ROOFRACK_QUAT = [0.0, 0.0, 0.7071068, 0.7071068]
+# Opaque black. The visual class color is the body tan, so this geom overrides it.
+ROOFRACK_RGBA = [0.0, 0.0, 0.0, 1.0]
+
 
 def mirror_position(position: ArrayLike, mirrored: bool) -> np.ndarray:
     position = np.asarray(position, dtype=float)
@@ -74,6 +88,8 @@ class HardwareModel:
     and lets MuJoCo infer inertia from a uniform density over that shape.
     ``convex_mesh_files`` lists visual meshes that were not closed volumes, so
     their inertia came from the convex hull instead of the exact mesh.
+    ``roofrack`` adds the roof-rack visual on the front torso. It is off by
+    default, so existing callers build the model without it.
     """
 
     def __init__(
@@ -81,8 +97,10 @@ class HardwareModel:
         config_path: str | Path = DEFAULT_CONFIG,
         waist_locked: bool = False,
         inertia_from_visual: bool = True,
+        roofrack: bool = False,
     ) -> None:
         self.inertia_from_visual = inertia_from_visual
+        self.roofrack = roofrack
         self.convex_mesh_files: list[str] = []
         self._mesh_inertia: dict[
             tuple[str, tuple[float, ...] | None], mujoco.mjtMeshInertia
@@ -179,6 +197,9 @@ class HardwareModel:
             )
 
         self._add_body_contents(front_torso, config["front_torso"], mirrored=False)
+        # Optional roof rack: rigid visual on the front torso, flange on the deck.
+        if self.roofrack:
+            self._add_roofrack(front_torso)
 
         # Legs: front legs hang off the front torso and back legs off the back torso,
         # so the waist joint couples the two leg pairs.
@@ -281,6 +302,33 @@ class HardwareModel:
         actuator.gear = [gear_ratio, 0, 0, 0, 0, 0]
         actuator.ctrlrange = [-stall_torque, stall_torque]
         return body
+
+    def _add_roofrack(self, front_torso: mujoco.MjsBody) -> None:
+        """Adds the roof rack as a visual geom of the front torso.
+
+        The visual class has no contact. With ``inertia_from_visual``, the rack
+        mass is set on this geom and MuJoCo derives the inertia from the mesh,
+        the same way link masses are assigned. This file's faces are not a
+        consistently oriented closed volume, so that path uses the convex hull
+        and warns. Explicit inertials leave the geom massless, because that
+        mode does not take mass from geoms.
+        """
+        mesh_name = self._add_mesh_asset(
+            left_mesh=ROOFRACK_MESH,
+            kind=naming.VIS,
+            mirrored=False,
+        )
+        geom = front_torso.add_geom(
+            self.visual_class,
+            name=naming.geom(front_torso.name, naming.VIS, "roofrack"),
+            type=mujoco.mjtGeom.mjGEOM_MESH,
+            meshname=mesh_name,
+            pos=ROOFRACK_POS,
+            quat=ROOFRACK_QUAT,
+        )
+        geom.rgba = ROOFRACK_RGBA
+        if self.inertia_from_visual:
+            geom.mass = ROOFRACK_MASS_KG
 
     def _add_body_contents(
         self,
