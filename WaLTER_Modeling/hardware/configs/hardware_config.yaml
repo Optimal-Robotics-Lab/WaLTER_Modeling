@@ -133,15 +133,27 @@ wheel:
 # and does not depend on joint speed. MuJoCo applies it as a force constraint,
 # so the torque bound stays well-defined at zero velocity. 0 is no dry friction.
 # One entry covers every joint of that type (four hips, four knees, eight axles).
+# Actuated frictionloss is a rough joint-frame backdrive measured on one
+# hardware test leg: hip 30, knee 14, axle 1.0 N*m. Closer than the datasheet
+# priors (hip 0.48*33 = 15.84, knee 4.7*1.64 = 7.71, axle 0.8), and not yet a
+# sliding-versus-breakaway fit. damping: 2 is an unidentified placeholder, the
+# same number on every actuated joint, not a datasheet value.
 joints:
   waist: {axis: [1, 0, 0], range: [-25, 25], stiffness: 10, damping: 1, frictionloss: 0.0}
-  hip: {axis: [0, 1, 0], damping: 2, frictionloss: 15.84}
-  knee: {axis: [0, 1, 0], damping: 2, frictionloss: 7.71}
-  axle: {axis: [0, 1, 0], damping: 2, frictionloss: 0.8}
+  hip: {axis: [0, 1, 0], damping: 2, frictionloss: 30}
+  knee: {axis: [0, 1, 0], damping: 2, frictionloss: 14}
+  axle: {axis: [0, 1, 0], damping: 2, frictionloss: 1.0}
 
-# Joint armature = rotor_inertia * gear_ratio^2.
-# stall_torque is motor-side; the actuator's joint torque limit is stall_torque * gear_ratio.
+# AIO-output frame. ctrl and stall_torque are CubeMars output torque (MIT t_ff),
+# N*m, not motor-shaft torque. gear_ratio is only the external stage, so the
+# joint torque limit is stall_torque * gear_ratio.
+# rotor_inertia = J_m * N_int^2 at the AIO shaft, from datasheet rotor inertia
+# only. Planet and cycloid inertia are omitted, so hip and knee armature are
+# lower bounds. armature = rotor_inertia * N_ext^2 = J_m * (N_int * N_ext)^2.
+#   hip:  AK70-10 KV100,    N_int 10, N_ext 33
+#   knee: AK80-64 KV80,     N_int 64, N_ext 1.64 (belt)
+#   axle: AK10-9 V2.0 KV60, N_int 9,  N_ext 1 (direct to the wheel; V2.0 peak 48)
 motors:
-  hip: {gear_ratio: 160, stall_torque: 1.8, rotor_inertia: 0.0002}
-  knee: {gear_ratio: 120, stall_torque: 1.8, rotor_inertia: 0.0002}
-  axle: {gear_ratio: 30, stall_torque: 1.8, rotor_inertia: 0.0002}
+  hip: {gear_ratio: 33, stall_torque: 24.8, rotor_inertia: 0.007535}
+  knee: {gear_ratio: 1.64, stall_torque: 120, rotor_inertia: 0.2312192}
+  axle: {gear_ratio: 1, stall_torque: 48, rotor_inertia: 0.0081162}

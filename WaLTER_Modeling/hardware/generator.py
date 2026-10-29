@@ -274,8 +274,8 @@ class HardwareModel:
             pos=mirror_position(joint_position, mirrored),
         )
 
-        # Reflected rotor inertia: the rotor spins gear_ratio times faster than the
-        # joint, so its inertia appears at the joint scaled by gear_ratio^2.
+        # rotor_inertia is already at the AIO output (J_m * N_int^2). gear_ratio
+        # is only the external stage, so joint armature is that inertia times N_ext^2.
         hinge = body.add_joint(
             type=mujoco.mjtJoint.mjJNT_HINGE,
             name=joint_name,
@@ -290,8 +290,9 @@ class HardwareModel:
 
         self._add_body_contents(body, body_config, mirrored)
 
-        # The control signal is motor-side torque; the gear ratio maps it to joint
-        # torque, so the joint torque limit is stall_torque * gear_ratio.
+        # ctrl is AIO output torque in N*m (MIT t_ff), not motor-shaft torque.
+        # gear_ratio is the external stage only, so the joint torque limit is
+        # stall_torque * gear_ratio.
         stall_torque = motor_config["stall_torque"]
         actuator = self.spec.add_actuator(
             name=naming.motor(joint_name),
