@@ -133,10 +133,11 @@ wheel:
 # and does not depend on joint speed. MuJoCo applies it as a force constraint,
 # so the torque bound stays well-defined at zero velocity. 0 is no dry friction.
 # One entry covers every joint of that type (four hips, four knees, eight axles).
-# frictionloss on the actuated joints is the datasheet backdrive prior in the
-# joint frame: AIO-output backdrive times N_ext only (hip 0.48*33 = 15.84,
-# knee 4.7*1.64 stored as 7.71, axle 0.8*1). damping: 2 is an unidentified
-# placeholder, the same number on every actuated joint, not a datasheet value.
+# Actuated frictionloss is a rough joint-frame backdrive measured on one
+# hardware test leg: hip 30, knee 14, axle 1.0 N*m. Closer than the datasheet
+# priors (hip 0.48*33 = 15.84, knee 4.7*1.64 = 7.71, axle 0.8), and not yet a
+# sliding-versus-breakaway fit. damping: 2 is an unidentified placeholder, the
+# same number on every actuated joint, not a datasheet value.
 joints:
   waist: {axis: [1, 0, 0], range: [-25, 25], stiffness: 10, damping: 1, frictionloss: 0.0}
   hip: {axis: [0, 1, 0], damping: 2, frictionloss: 30}

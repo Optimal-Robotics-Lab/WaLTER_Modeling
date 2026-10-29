@@ -59,16 +59,18 @@ flowchart TD
     Jm["J_m on the motor shaft"]
     Nint["N_int inside the AIO"]
     Tpeak["peak output torque"]
-    Tbd["backdrive torque"]
   end
   subgraph ext [External stage]
     Next["N_ext: cycloid 33, belt 1.64, or 1"]
+  end
+  subgraph leg [Hardware test leg]
+    Tbd["measured joint backdrive"]
   end
   subgraph yaml [hardware_config.yaml]
     RI["rotor_inertia = J_m * N_int^2"]
     GR["gear_ratio = N_ext"]
     ST["stall_torque = peak output"]
-    FL["frictionloss = backdrive * N_ext"]
+    FL["frictionloss = measured joint backdrive"]
   end
   subgraph mj [Unchanged generator equations]
     Arm["armature = rotor_inertia * gear_ratio^2"]
@@ -79,7 +81,6 @@ flowchart TD
   Next --> GR
   Tpeak --> ST
   Tbd --> FL
-  Next --> FL
   RI --> Arm
   GR --> Arm
   GR --> Act
@@ -88,19 +89,19 @@ flowchart TD
 
 ## Parameters
 
-The table is the datasheet frame now in `hardware_config.yaml`, and what the generator compiles from it. `damping` is still an unidentified placeholder. `frictionloss` is still a datasheet backdrive prior, not a measured sliding friction. Total kinematic ratio `N_int * N_ext` is 330 on the hip, 104.96 on the knee, and 9 on the axle.
+The table is what `hardware_config.yaml` stores, and what the generator compiles from it. Inertia, `gear_ratio`, and `stall_torque` are still the datasheet frame. `damping` is still an unidentified placeholder. `frictionloss` is a rough backdrive torque measured on one hardware test leg, in the joint frame, in N·m. It replaces the datasheet prior (hip 15.84, knee 7.71, axle 0.8). Total kinematic ratio `N_int * N_ext` is 330 on the hip, 104.96 on the knee, and 9 on the axle.
 
 Datasheet `J_m` is 753.5, 564.5, and 1002 g·cm². Conversion: 1 g·cm² = 1e-7 kg·m².
 
-| Joint | Module | Datasheet | J_m (kg·m²) | N_int | N_ext | rotor_inertia (kg·m²) | Armature (kg·m²) | stall_torque (N·m) | Joint limit (N·m) | frictionloss prior (N·m) | Damping (N·m/(rad/s)) |
+| Joint | Module | Datasheet | J_m (kg·m²) | N_int | N_ext | rotor_inertia (kg·m²) | Armature (kg·m²) | stall_torque (N·m) | Joint limit (N·m) | frictionloss (N·m) | Damping (N·m/(rad/s)) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Hip, all four | AK70-10 KV100 | [AK70-10 KV100](https://www.cubemars.com/product/ak70-10-kv100-robotic-actuator.html) | 7.535e-5 | 10 | 33 cycloid | 0.007535 | 8.205615 | 24.8 | 818.4 | 15.84 | 2, placeholder |
-| Knee, all four | AK80-64 KV80 | [AK80-64 KV80](https://www.cubemars.com/product/ak80-64-kv80-robotic-actuator.html) | 5.645e-5 | 64 | 1.64 belt | 0.2312192 | 0.621887 | 120 | 196.8 | 7.71 | 2, placeholder |
-| Axle, all eight | AK10-9 V2.0 KV60 | [AK10-9 V2.0 KV60](https://www.cubemars.com/product/ak10-9-v2-0-kv60-robotic-actuator.html) | 1.002e-4 | 9 | 1, direct to the wheel | 0.0081162 | 0.0081162 | 48 | 48 | 0.8 | 2, placeholder |
+| Hip, all four | AK70-10 KV100 | [AK70-10 KV100](https://www.cubemars.com/product/ak70-10-kv100-robotic-actuator.html) | 7.535e-5 | 10 | 33 cycloid | 0.007535 | 8.205615 | 24.8 | 818.4 | 30, one test leg | 2, placeholder |
+| Knee, all four | AK80-64 KV80 | [AK80-64 KV80](https://www.cubemars.com/product/ak80-64-kv80-robotic-actuator.html) | 5.645e-5 | 64 | 1.64 belt | 0.2312192 | 0.621887 | 120 | 196.8 | 14, one test leg | 2, placeholder |
+| Axle, all eight | AK10-9 V2.0 KV60 | [AK10-9 V2.0 KV60](https://www.cubemars.com/product/ak10-9-v2-0-kv60-robotic-actuator.html) | 1.002e-4 | 9 | 1, direct to the wheel | 0.0081162 | 0.0081162 | 48 | 48 | 1.0, one test leg | 2, placeholder |
 
-`frictionloss` is AIO-output backdrive times `N_ext`: hip `0.48 * 33 = 15.84` N·m, knee `4.7 * 1.64 = 7.708` N·m stored as 7.71, axle `0.8 * 1 = 0.8` N·m. The XML writer prints hip `armature` as 8.20561. Axle actuators omit `gear="1"` because 1 is the MuJoCo default. The compiled actuator gear is 1.
+`frictionloss` is the backdrive torque measured on the hardware test leg, in the joint frame: hip 30 N·m, knee 14 N·m, axle 1.0 N·m. The same number is copied to every joint of that type. The datasheet priors were AIO-output backdrive times `N_ext`: hip `0.48 * 33 = 15.84` N·m, knee `4.7 * 1.64 = 7.708` N·m, axle `0.8 * 1 = 0.8` N·m. The test-leg values are about 1.9×, 1.8×, and 1.25× those priors. They are rough estimates from one leg, closer than the datasheet, and not a sliding-versus-breakaway fit. The XML writer prints hip `armature` as 8.20561. Axle actuators omit `gear="1"` because 1 is the MuJoCo default. The compiled actuator gear is 1.
 
-`Kt` below is on the motor shaft, in N·m/A. `Kt * I_peak` is a few N·m. The advertised peak is the output torque, which is `stall_torque`.
+`Kt` below is on the motor shaft, in N·m/A. `Kt * I_peak` is a few N·m. The advertised peak is the output torque, which is `stall_torque`. The backdrive column is the datasheet figure at the AIO output. YAML `frictionloss` is the test-leg torque in the joint frame, not this column times `N_ext`.
 
 | Joint | Kt (N·m/A) | No-load at 48 V | Backdrive at the AIO output (N·m) |
 | --- | --- | --- | --- |
@@ -118,19 +119,19 @@ Thigh inertia is about 0.01 kg·m² and shin inertia about 0.005 kg·m², so ref
 
 ## frictionloss
 
-MuJoCo applies one symmetric Coulomb torque as a constraint, so the joint can stick at zero speed. The stored values are datasheet backdrive priors in the joint frame, in N·m, not a measured sliding friction. Breakaway is higher than sliding. The simulated joint creeps under bias torques the real joint holds. A MuJoCo joint has no load-dependent gearbox friction and no direction-dependent efficiency. A constant `frictionloss` plus a constant `gear` cannot match both a no-load backdrive and a near-stall forward drive. Fit the regime you simulate.
+MuJoCo applies one symmetric Coulomb torque as a constraint, so the joint can stick at zero speed. The stored values are rough backdrive torques from one hardware test leg, in the joint frame, in N·m: hip 30, knee 14, axle 1.0. They replace the datasheet priors of 15.84, 7.71, and 0.8 N·m. Breakaway is higher than sliding, and this single torque does not separate them. A MuJoCo joint has no load-dependent gearbox friction and no direction-dependent efficiency. A constant `frictionloss` plus a constant `gear` cannot match both a no-load backdrive and a near-stall forward drive. These numbers are the backdrive.
 
-The hip cycloid and the AK80-64 are poor backdrives: 0.48 N·m at the AK70-10 output, then 33:1, and 4.7 N·m on the AK80-64 before the belt. A passive pendulum is not a usable inertia test on those joints. The wheel, at 0.8 N·m, can be backdriven.
+The hip cycloid and the AK80-64 remain poor backdrives at the measured 30 N·m and 14 N·m. A passive pendulum is not a usable inertia test on those joints. The wheel, at 1.0 N·m, can be backdriven.
 
 ## What to measure next
 
-The datasheet frame is already in the YAML. These steps replace it with measured joint inertia, `damping`, `frictionloss`, ranges, and the waist spring. Run the actuated-joint tests at operating grease temperature, after a defined warm-up. Repeat on at least two units of each type before copying one number to all four hips, four knees, or eight axles.
+Inertia, `gear_ratio`, and `stall_torque` in the YAML are still the datasheet frame. `frictionloss` is a rough backdrive from one test leg: hip 30 N·m, knee 14 N·m, axle 1.0 N·m. These steps replace the datasheet quantities and replace that backdrive with a Coulomb fit. Run the actuated-joint tests at operating grease temperature, after a defined warm-up. Repeat on at least two units of each type before copying one number to all four hips, four knees, or eight axles.
 
 1. **Nameplate and sign.** Confirm KV, voltage, and firmware MIT `T_MAX`, so `ctrl` matches the CAN torque scale. Confirm the external ratios: cycloid nameplate 33, belt tooth counts for 1.64, and 1 on the wheel. One revolution of the joint moves the AIO output by `N_ext` turns. Set the encoder offset so `q = 0` matches the CAD pose. Positive `ctrl` has to flex the left and right knees the same way relative to the body. A y-axis hinge does not flip under the xz mirror the generator uses. The driver count direction still can. The AK70-10 and AK80-64 list a single inner encoder, so joint angle is that count divided by both ratios unless a separate joint encoder exists. The AK10-9 V2 has an output encoder. The difference between AIO-output angle and joint angle is cycloid or belt windup.
 
 2. **Actuator class.** Zero-current backdrive, then torque versus speed. Current mode gives Coulomb friction plus a small viscous term. A steep linear drag means the drive is behaving like a voltage source, and that slope belongs in `damping` or an affine actuator bias. Separately, map the torque-speed curve in torque mode out to no-load speed. That curve is the clip, not the `damping`.
 
-3. **Statics.** A slow triangle in `q`, well under 0.2 rad/s, in both directions. Fit `τ = τ_c sgn(q̇) + a cos q + b sin q`, where `a` and `b` are gravity coefficients in N·m, or skip gravity if the axis is vertical. Keep one `frictionloss` compromise. A second known load checks whether `|τ_c|` grows with load. Leave gear-mesh ripple out of `frictionloss` unless it is a large fraction of the Coulomb torque.
+3. **Statics.** A slow triangle in `q`, well under 0.2 rad/s, in both directions. Fit `τ = τ_c sgn(q̇) + a cos q + b sin q`, where `a` and `b` are gravity coefficients in N·m, or skip gravity if the axis is vertical. Keep one `frictionloss` compromise. A second known load checks whether `|τ_c|` grows with load. Leave gear-mesh ripple out of `frictionloss` unless it is a large fraction of the Coulomb torque. The current YAML values (hip 30, knee 14, axle 1.0 N·m) are the rough test-leg backdrive. This fit replaces them.
 
 4. **Backlash and windup.** Clamp the output. Deadband is backlash. The remaining deflection versus torque is the torsional stiffness `k`, in N·m/rad. If windup at peak torque is inside the encoder noise, keep the rigid hinge. If it is not, record `k` and `sqrt(k / I_a)`, in rad/s, before deciding on a two-inertia joint. The knee belt is the compliance most likely to break the rigid hinge. Compare AIO-output angle divided by 1.64 with joint angle during a torque pulse.
 
@@ -146,7 +147,7 @@ The datasheet frame is already in the YAML. These steps replace it with measured
 
    Size `I_k` from the rotor-only priors so the acceleration changes by a few tens of percent. Two 8 kg masses at 0.5 m are 4.0 kg·m², about half the hip's 8.2 kg·m². One 2 kg mass at 0.4 m is 0.32 kg·m², about half the knee's 0.62 kg·m². For the wheel, remove the wheel and clamp a hub. A 0.5 kg mass at 0.1 m is 0.005 kg·m². The hip and knee can stay assembled: link inertia is about a percent of `I_a`. Store the installed joint inertia. Dividing it back down to a motor-shaft `J_m` throws the precision away on `N_total²`. After `I` is known, constant-speed holds give `b`. Hold the axles with the wheel in the air or removed, so tire loss stays in the wheel contact parameters.
 
-6. **Write the measurements back.** Replace YAML `rotor_inertia` with `I_joint / N_ext²`, in kg·m². The generator equation does not change. Replace `damping` and `frictionloss` with the fits. Add `range` from encoder readings at the mechanical stops and at first self-contact. Re-export `WaLTER_Hardware.xml` from the generator.
+6. **Write the measurements back.** Replace YAML `rotor_inertia` with `I_joint / N_ext²`, in kg·m². The generator equation does not change. Replace `damping` with the fit. Replace `frictionloss` with `τ_c` from the static fit. The values there now are the one-leg backdrive. Add `range` from encoder readings at the mechanical stops and at first self-contact. Re-export `WaLTER_Hardware.xml` from the generator.
 
 7. **Waist, separately.** It is a passive torsion spring. Static moment versus angle gives `stiffness` and any offset from `q = 0`. Free decay, with the front-body inertia known, gives `damping`. Hysteresis gives `frictionloss`. Confirm the ±25 deg stops. Current YAML: `stiffness` 10 N·m/rad, `damping` 1 N·m/(rad/s), `frictionloss` 0, `range` ±25 deg. MjSpec takes range in degrees. The exported XML with `angle="radian"` stores ±0.436 rad.
 
