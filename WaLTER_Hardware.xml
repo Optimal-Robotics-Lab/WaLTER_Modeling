@@ -1,5 +1,5 @@
 <mujoco model="MuJoCo Model">
-  <compiler angle="radian" meshdir="/home/orl1/Repos/WaLTER_Modeling/WaLTER_Modeling/hardware/assets/meshes/" texturedir="/home/orl1/Repos/WaLTER_Modeling/WaLTER_Modeling/hardware/assets/textures/"/>
+  <compiler angle="radian" meshdir="/home/orl/repos/WaLTER_Modeling/WaLTER_Modeling/hardware/assets/meshes/" texturedir="/home/orl/repos/WaLTER_Modeling/WaLTER_Modeling/hardware/assets/textures/"/>
 
   <default>
     <default class="visual">
@@ -33,40 +33,40 @@
         <geom name="front_torso_col" class="collision" size="0.23 0.15 0.09" pos="0.23 0 0" type="box"/>
         <geom name="front_torso_vis" class="visual" pos="0 0 0" quat="0.5 0.5 0.5 0.5" type="mesh" mass="25.91" mesh="frontbody_vis_mesh"/>
         <body name="fr_thigh" pos="0.366624 -0.150114 0">
-          <joint name="fr_hip" armature="8.20561" damping="2" frictionloss="15.84" axis="0 1 0"/>
+          <joint name="fr_hip" armature="8.20561" damping="2" frictionloss="30" axis="0 1 0"/>
           <geom name="fr_thigh_col" class="collision" size="0.03 0.0904875" pos="0 -0.03 -0.08" type="capsule"/>
           <geom name="fr_thigh_vis" class="visual" quat="0 0 0.707107 -0.707107" type="mesh" mass="5.25" mesh="thigh_right_vis_mesh"/>
           <body name="fr_shin" pos="0 -0.057673 -0.180975">
-            <joint name="fr_knee" armature="0.621887" damping="2" frictionloss="7.71" axis="0 1 0"/>
+            <joint name="fr_knee" armature="0.621887" damping="2" frictionloss="14" axis="0 1 0"/>
             <geom name="fr_shin_col" class="collision" size="0.03 0.108" pos="0 -0.03 0" quat="0.707107 0 0.707107 0" type="capsule"/>
             <geom name="fr_shin_vis" class="visual" type="mesh" mass="5.76" mesh="shin_right_vis_mesh"/>
             <body name="fr_wheel1" pos="0.1137 -0.0471 0">
-              <joint name="fr_axle1" armature="0.0081162" damping="2" frictionloss="0.8" axis="0 1 0"/>
+              <joint name="fr_axle1" armature="0.0081162" damping="2" frictionloss="1" axis="0 1 0"/>
               <geom name="fr_wheel1_col" class="collision" size="0.11 0.11 0.05" pos="0 -0.04 0" quat="0.707107 -0.707107 0 0" type="ellipsoid" solref="-80800 -112"/>
               <geom name="fr_wheel1_vis" class="visual" pos="0 0 0" quat="0.707107 0.707107 0 0" type="mesh" rgba="1 1 1 1" mass="1.59" material="wheel" mesh="wheel_right_vis_mesh"/>
             </body>
             <body name="fr_wheel2" pos="-0.1137 -0.0471 0">
-              <joint name="fr_axle2" armature="0.0081162" damping="2" frictionloss="0.8" axis="0 1 0"/>
+              <joint name="fr_axle2" armature="0.0081162" damping="2" frictionloss="1" axis="0 1 0"/>
               <geom name="fr_wheel2_col" class="collision" size="0.11 0.11 0.05" pos="0 -0.04 0" quat="0.707107 -0.707107 0 0" type="ellipsoid" solref="-80800 -112"/>
               <geom name="fr_wheel2_vis" class="visual" pos="0 0 0" quat="0.707107 0.707107 0 0" type="mesh" rgba="1 1 1 1" mass="1.59" material="wheel" mesh="wheel_right_vis_mesh"/>
             </body>
           </body>
         </body>
         <body name="fl_thigh" pos="0.366624 0.150114 0">
-          <joint name="fl_hip" armature="8.20561" damping="2" frictionloss="15.84" axis="0 1 0"/>
+          <joint name="fl_hip" armature="8.20561" damping="2" frictionloss="30" axis="0 1 0"/>
           <geom name="fl_thigh_col" class="collision" size="0.03 0.0904875" pos="0 0.03 -0.08" type="capsule"/>
           <geom name="fl_thigh_vis" class="visual" quat="0 0 0.707107 0.707107" type="mesh" mass="5.25" mesh="thigh_vis_mesh"/>
           <body name="fl_shin" pos="0 0.057673 -0.180975">
-            <joint name="fl_knee" armature="0.621887" damping="2" frictionloss="7.71" axis="0 1 0"/>
+            <joint name="fl_knee" armature="0.621887" damping="2" frictionloss="14" axis="0 1 0"/>
             <geom name="fl_shin_col" class="collision" size="0.03 0.108" pos="0 0.03 0" quat="0.707107 0 0.707107 0" type="capsule"/>
             <geom name="fl_shin_vis" class="visual" type="mesh" mass="5.76" mesh="shin_vis_mesh"/>
             <body name="fl_wheel1" pos="0.1137 0.0471 0">
-              <joint name="fl_axle1" armature="0.0081162" damping="2" frictionloss="0.8" axis="0 1 0"/>
+              <joint name="fl_axle1" armature="0.0081162" damping="2" frictionloss="1" axis="0 1 0"/>
               <geom name="fl_wheel1_col" class="collision" size="0.11 0.11 0.05" pos="0 0.04 0" quat="0.707107 0.707107 0 0" type="ellipsoid" solref="-80800 -112"/>
               <geom name="fl_wheel1_vis" class="visual" pos="0 0 0" quat="0.707107 -0.707107 0 0" type="mesh" rgba="1 1 1 1" mass="1.59" material="wheel" mesh="wheel_vis_mesh"/>
             </body>
             <body name="fl_wheel2" pos="-0.1137 0.0471 0">
-              <joint name="fl_axle2" armature="0.0081162" damping="2" frictionloss="0.8" axis="0 1 0"/>
+              <joint name="fl_axle2" armature="0.0081162" damping="2" frictionloss="1" axis="0 1 0"/>
               <geom name="fl_wheel2_col" class="collision" size="0.11 0.11 0.05" pos="0 0.04 0" quat="0.707107 0.707107 0 0" type="ellipsoid" solref="-80800 -112"/>
               <geom name="fl_wheel2_vis" class="visual" pos="0 0 0" quat="0.707107 -0.707107 0 0" type="mesh" rgba="1 1 1 1" mass="1.59" material="wheel" mesh="wheel_vis_mesh"/>
             </body>
@@ -74,40 +74,40 @@
         </body>
       </body>
       <body name="br_thigh" pos="-0.00167 -0.150114 -0.000127">
-        <joint name="br_hip" armature="8.20561" damping="2" frictionloss="15.84" axis="0 1 0"/>
+        <joint name="br_hip" armature="8.20561" damping="2" frictionloss="30" axis="0 1 0"/>
         <geom name="br_thigh_col" class="collision" size="0.03 0.0904875" pos="0 -0.03 -0.08" type="capsule"/>
         <geom name="br_thigh_vis" class="visual" quat="0 0 0.707107 -0.707107" type="mesh" mass="5.25" mesh="thigh_right_vis_mesh"/>
         <body name="br_shin" pos="0 -0.057673 -0.180975">
-          <joint name="br_knee" armature="0.621887" damping="2" frictionloss="7.71" axis="0 1 0"/>
+          <joint name="br_knee" armature="0.621887" damping="2" frictionloss="14" axis="0 1 0"/>
           <geom name="br_shin_col" class="collision" size="0.03 0.108" pos="0 -0.03 0" quat="0.707107 0 0.707107 0" type="capsule"/>
           <geom name="br_shin_vis" class="visual" type="mesh" mass="5.76" mesh="shin_right_vis_mesh"/>
           <body name="br_wheel1" pos="0.1137 -0.0471 0">
-            <joint name="br_axle1" armature="0.0081162" damping="2" frictionloss="0.8" axis="0 1 0"/>
+            <joint name="br_axle1" armature="0.0081162" damping="2" frictionloss="1" axis="0 1 0"/>
             <geom name="br_wheel1_col" class="collision" size="0.11 0.11 0.05" pos="0 -0.04 0" quat="0.707107 -0.707107 0 0" type="ellipsoid" solref="-80800 -112"/>
             <geom name="br_wheel1_vis" class="visual" pos="0 0 0" quat="0.707107 0.707107 0 0" type="mesh" rgba="1 1 1 1" mass="1.59" material="wheel" mesh="wheel_right_vis_mesh"/>
           </body>
           <body name="br_wheel2" pos="-0.1137 -0.0471 0">
-            <joint name="br_axle2" armature="0.0081162" damping="2" frictionloss="0.8" axis="0 1 0"/>
+            <joint name="br_axle2" armature="0.0081162" damping="2" frictionloss="1" axis="0 1 0"/>
             <geom name="br_wheel2_col" class="collision" size="0.11 0.11 0.05" pos="0 -0.04 0" quat="0.707107 -0.707107 0 0" type="ellipsoid" solref="-80800 -112"/>
             <geom name="br_wheel2_vis" class="visual" pos="0 0 0" quat="0.707107 0.707107 0 0" type="mesh" rgba="1 1 1 1" mass="1.59" material="wheel" mesh="wheel_right_vis_mesh"/>
           </body>
         </body>
       </body>
       <body name="bl_thigh" pos="-0.00167 0.150114 -0.000127">
-        <joint name="bl_hip" armature="8.20561" damping="2" frictionloss="15.84" axis="0 1 0"/>
+        <joint name="bl_hip" armature="8.20561" damping="2" frictionloss="30" axis="0 1 0"/>
         <geom name="bl_thigh_col" class="collision" size="0.03 0.0904875" pos="0 0.03 -0.08" type="capsule"/>
         <geom name="bl_thigh_vis" class="visual" quat="0 0 0.707107 0.707107" type="mesh" mass="5.25" mesh="thigh_vis_mesh"/>
         <body name="bl_shin" pos="0 0.057673 -0.180975">
-          <joint name="bl_knee" armature="0.621887" damping="2" frictionloss="7.71" axis="0 1 0"/>
+          <joint name="bl_knee" armature="0.621887" damping="2" frictionloss="14" axis="0 1 0"/>
           <geom name="bl_shin_col" class="collision" size="0.03 0.108" pos="0 0.03 0" quat="0.707107 0 0.707107 0" type="capsule"/>
           <geom name="bl_shin_vis" class="visual" type="mesh" mass="5.76" mesh="shin_vis_mesh"/>
           <body name="bl_wheel1" pos="0.1137 0.0471 0">
-            <joint name="bl_axle1" armature="0.0081162" damping="2" frictionloss="0.8" axis="0 1 0"/>
+            <joint name="bl_axle1" armature="0.0081162" damping="2" frictionloss="1" axis="0 1 0"/>
             <geom name="bl_wheel1_col" class="collision" size="0.11 0.11 0.05" pos="0 0.04 0" quat="0.707107 0.707107 0 0" type="ellipsoid" solref="-80800 -112"/>
             <geom name="bl_wheel1_vis" class="visual" pos="0 0 0" quat="0.707107 -0.707107 0 0" type="mesh" rgba="1 1 1 1" mass="1.59" material="wheel" mesh="wheel_vis_mesh"/>
           </body>
           <body name="bl_wheel2" pos="-0.1137 0.0471 0">
-            <joint name="bl_axle2" armature="0.0081162" damping="2" frictionloss="0.8" axis="0 1 0"/>
+            <joint name="bl_axle2" armature="0.0081162" damping="2" frictionloss="1" axis="0 1 0"/>
             <geom name="bl_wheel2_col" class="collision" size="0.11 0.11 0.05" pos="0 0.04 0" quat="0.707107 0.707107 0 0" type="ellipsoid" solref="-80800 -112"/>
             <geom name="bl_wheel2_vis" class="visual" pos="0 0 0" quat="0.707107 -0.707107 0 0" type="mesh" rgba="1 1 1 1" mass="1.59" material="wheel" mesh="wheel_vis_mesh"/>
           </body>
