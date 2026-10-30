@@ -5,6 +5,10 @@ renders/
 *.xml
 MUJOCO_LOG.TXT
 
+# Local technical note, not robot model source
+/walter_mit_command_sim2real_survey.pdf
+/walter_mit_command_sim2real_survey/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
